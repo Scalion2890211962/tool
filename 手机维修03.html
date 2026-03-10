@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极客修 - 手机维修大师</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(0,212,255,0.3);
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: rgba(0,0,0,0.3);
+            padding: 15px 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(0,212,255,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,212,255,0.2);
+        }
+
+        .stat-icon {
+            font-size: 1.5em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .panel-title {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #00d4ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .phone-display {
+            background: linear-gradient(145deg, #2a2a3a, #1a1a2a);
+            border-radius: 30px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 
+                0 0 0 2px #333,
+                0 0 0 5px #1a1a2a,
+                0 20px 60px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+
+        .phone-screen {
+            background: #000;
+            border-radius: 20px;
+            aspect-ratio: 9/19;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+
+        .phone-screen.on {
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f3460 100%);
+        }
+
+        .screen-content {
+            padding: 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .phone-screen.on .screen-content {
+            opacity: 1;
+        }
+
+        .screen-glitch {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(255,0,0,0.1) 2px,
+                rgba(255,0,0,0.1) 4px
+            );
+            animation: glitch 0.3s infinite;
+            display: none;
+        }
+
+        .phone-screen.broken .screen-glitch {
+            display: block;
+        }
+
+        .phone-screen.broken .screen-content {
+            filter: blur(2px);
+            opacity: 0.5;
+        }
+
+        @keyframes glitch {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+            100% { transform: translateY(0); }
+        }
+
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40%;
+            height: 25px;
+            background: #000;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 10;
+        }
+
+        .component-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+
+        .component-layer.active {
+            display: block;
+            pointer-events: auto;
+        }
+
+        .component {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+        }
+
+        .component:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 8px 25px rgba(0,212,255,0.4));
+        }
+
+        .component.removed {
+            animation: removeComponent 0.5s forwards;
+        }
+
+        @keyframes removeComponent {
+            to {
+                transform: translateY(-100px) rotate(10deg);
+                opacity: 0;
+            }
+        }
+
+        .component-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .tool-btn {
+            background: linear-gradient(145deg, #2a2a3a, #1a1a2a);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .tool-btn:hover::before {
+            left: 100%;
+        }
+
+        .tool-btn:hover {
+            border-color: #00d4ff;
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,212,255,0.2);
+        }
+
+        .tool-btn.active {
+            background: linear-gradient(145deg, #00d4ff, #0099cc);
+            border-color: #00d4ff;
+            color: #000;
+            box-shadow: 0 0 30px rgba(0,212,255,0.4);
+        }
+
+        .tool-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .tool-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .tool-name {
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .diagnosis-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .symptom-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .symptom-item {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 3px solid #ff4444;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .parts-inventory {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .part-card {
+            background: linear-gradient(145deg, #2a2a3a, #1a1a2a);
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .part-card:hover {
+            border-color: #00ff88;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,255,136,0.2);
+        }
+
+        .part-card.selected {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.1);
+            box-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+
+        .part-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .part-name {
+            font-size: 0.8em;
+            color: #aaa;
+        }
+
+        .part-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #00d4ff;
+            color: #000;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 15px;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0,212,255,0.3);
+        }
+
+        .action-btn:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(0,212,255,0.5);
+        }
+
+        .customer-mood {
+            font-size: 3em;
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+
+        .dialog-box {
+            background: rgba(0,0,0,0.5);
+            border-left: 4px solid #00d4ff;
+            padding: 20px;
+            border-radius: 0 15px 15px 0;
+            margin-top: 20px;
+            font-style: italic;
+            position: relative;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dialog-box::before {
+            content: '"';
+            font-size: 3em;
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            color: #00d4ff;
+            opacity: 0.3;
+        }
+
+        .minigame-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .minigame-overlay.active {
+            display: flex;
+        }
+
+        .minigame-container {
+            background: linear-gradient(145deg, #2a2a3a, #1a1a2a);
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            border: 2px solid #00d4ff;
+            box-shadow: 0 0 60px rgba(0,212,255,0.3);
+        }
+
+        .soldering-game {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: #1a1a2a;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .circuit-board {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(90deg, rgba(0,212,255,0.1) 1px, transparent 1px),
+                linear-gradient(rgba(0,212,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .solder-point {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #ff4444;
+            border-radius: 50%;
+            background: rgba(255,68,68,0.2);
+            cursor: crosshair;
+            transition: all 0.3s;
+        }
+
+        .solder-point:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255,68,68,0.5);
+        }
+
+        .solder-point.fixed {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.3);
+            box-shadow: 0 0 20px rgba(0,255,136,0.5);
+        }
+
+        .iron-cursor {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            pointer-events: none;
+            font-size: 2em;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            transition: transform 0.1s;
+        }
+
+        .close-minigame {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ff4444;
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5em;
+            transition: all 0.3s;
+        }
+
+        .close-minigame:hover {
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 0 20px rgba(255,68,68,0.5);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #00d4ff, #0099cc);
+            color: #000;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: translateX(400px);
+            transition: transform 0.5s;
+            z-index: 1001;
+            font-weight: 600;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: linear-gradient(145deg, #ff4444, #cc0000);
+            color: #fff;
+        }
+
+        .notification.success {
+            background: linear-gradient(145deg, #00ff88, #00cc66);
+            color: #000;
+        }
+
+        .layer-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .layer-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #444;
+            transition: all 0.3s;
+        }
+
+        .layer-dot.active {
+            background: #00d4ff;
+            box-shadow: 0 0 10px rgba(0,212,255,0.8);
+        }
+
+        .layer-dot.broken {
+            background: #ff4444;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.5s;
+        }
+
+        .start-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .logo-animation {
+            font-size: 5em;
+            margin-bottom: 30px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .start-btn {
+            padding: 20px 60px;
+            font-size: 1.5em;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            border: none;
+            border-radius: 50px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(0,212,255,0.3);
+        }
+
+        .start-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 20px 40px rgba(0,212,255,0.4);
+        }
+
+        .tutorial-text {
+            max-width: 600px;
+            text-align: center;
+            margin: 20px 0;
+            line-height: 1.6;
+            color: #aaa;
+        }
+
+        .repair-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 2px solid #00d4ff;
+            padding-left: 10px;
+            animation: slideIn 0.3s;
+        }
+
+        .log-entry.error {
+            border-left-color: #ff4444;
+            color: #ff8888;
+        }
+
+        .log-entry.success {
+            border-left-color: #00ff88;
+            color: #88ffaa;
+        }
+
+        /* 螺丝钉样式 */
+        .screw {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, #silver 30%, #666 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+
+        .screw::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 2px;
+            background: #333;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .screw::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80%;
+            height: 2px;
+            background: #333;
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        .screw.removed {
+            transform: scale(0) rotate(360deg);
+            opacity: 0;
+        }
+
+        .screw:hover {
+            box-shadow: 0 0 15px rgba(255,215,0,0.8);
+        }
+
+        /* 粒子效果 */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: particleFloat 1s ease-out forwards;
+        }
+
+        @keyframes particleFloat {
+            to {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+        }
+
+        .dust-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 开始界面 -->
+    <div class="start-screen" id="startScreen">
+        <div class="logo-animation">📱🔧</div>
+        <h1 style="font-size: 3em; margin-bottom: 20px; background: linear-gradient(45deg, #00d4ff, #7b2cbf); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">极客修</h1>
+        <p class="tutorial-text">
+            欢迎来到手机维修大师！在这里，你将经营自己的维修店，诊断各种故障，拆解精密设备，更换损坏零件。<br><br>
+            🔍 诊断故障 | 🔧 拆解维修 | 💰 赚取金币 | ⭐ 提升声誉
+        </p>
+        <button class="start-btn" onclick="startGame()">开始营业</button>
+    </div>
+
+    <!-- 通知 -->
+    <div class="notification" id="notification"></div>
+
+    <!-- 小游戏覆盖层 -->
+    <div class="minigame-overlay" id="minigameOverlay">
+        <button class="close-minigame" onclick="closeMinigame()">×</button>
+        <div class="minigame-container" id="minigameContent">
+            <!-- 动态内容 -->
+        </div>
+    </div>
+
+    <div class="game-container" id="gameContainer" style="display: none;">
+        <!-- 头部信息 -->
+        <div class="header">
+            <h1>极客修 - 手机维修大师</h1>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-icon">💰</span>
+                    <div>
+                        <div style="font-size: 0.8em; color: #aaa;">资金</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #ffd700;" id="money">¥5000</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">⭐</span>
+                    <div>
+                        <div style="font-size: 0.8em; color: #aaa;">声誉</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #ffaa00;" id="reputation">100</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🔧</span>
+                    <div>
+                        <div style="font-size: 0.8em; color: #aaa;">维修等级</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #00d4ff;" id="level">Lv.1</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">📱</span>
+                    <div>
+                        <div style="font-size: 0.8em; color: #aaa;">今日订单</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #00ff88;" id="orders">0/5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 左侧面板：客户与诊断 -->
+            <div class="panel">
+                <div class="panel-title">
+                    <span>👤</span>
+                    <span>客户信息</span>
+                </div>
+                
+                <div class="customer-mood" id="customerMood">😊</div>
+                
+                <div class="dialog-box" id="customerDialog">
+                    欢迎来到极客修！请帮我看看我的手机出了什么问题...
+                </div>
+
+                <div class="diagnosis-panel">
+                    <div class="panel-title" style="font-size: 1.1em;">
+                        <span>🔍</span>
+                        <span>故障诊断</span>
+                    </div>
+                    <ul class="symptom-list" id="symptomList">
+                        <li class="symptom-item">
+                            <span>❓</span>
+                            <span>等待检测...</span>
+                        </li>
+                    </ul>
+                    <button class="action-btn" onclick="diagnosePhone()" id="diagnoseBtn">
+                        开始诊断
+                    </button>
+                </div>
+
+                <div class="repair-log" id="repairLog">
+                    <div class="log-entry">系统初始化完成...</div>
+                </div>
+            </div>
+
+            <!-- 中间面板：手机可视化 -->
+            <div class="panel">
+                <div class="panel-title">
+                    <span>📱</span>
+                    <span>维修工作台</span>
+                    <span style="margin-left: auto; font-size: 0.8em; color: #aaa;" id="phoneModel">iPhone 15 Pro</span>
+                </div>
+
+                <div class="phone-display" id="phoneDisplay">
+                    <div class="phone-screen" id="phoneScreen">
+                        <div class="notch"></div>
+                        <div class="screen-glitch"></div>
+                        <div class="screen-content">
+                            <div style="text-align: center;">
+                                <div style="font-size: 4em; margin-bottom: 20px;">📱</div>
+                                <div style="color: #00d4ff; font-size: 1.2em;">设备状态</div>
+                                <div id="deviceStatus" style="margin-top: 10px; color: #ff4444;">无法开机</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 组件层 -->
+                        <div class="component-layer" id="screenLayer">
+                            <!-- 屏幕组件 -->
+                            <svg class="component-svg" style="position: absolute; top: 10%; left: 5%; width: 90%; height: 80%;" id="screenComponent">
+                                <rect x="0" y="0" width="100%" height="100%" rx="20" fill="url(#screenGrad)" stroke="#333" stroke-width="2"/>
+                                <defs>
+                                    <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#2a2a3a;stop-opacity:0.9" />
+                                        <stop offset="100%" style="stop-color:#1a1a2a;stop-opacity:0.9" />
+                                    </linearGradient>
+                                </defs>
+                                <text x="50%" y="50%" text-anchor="middle" fill="#00d4ff" font-size="14" id="screenText">OLED显示屏</text>
+                            </svg>
+                        </div>
+
+                        <div class="component-layer" id="batteryLayer">
+                            <!-- 电池组件 -->
+                            <svg class="component-svg" style="position: absolute; top: 30%; left: 20%; width: 60%; height: 40%;" id="batteryComponent">
+                                <rect x="0" y="0" width="90%" height="100%" rx="10" fill="#333" stroke="#555" stroke-width="2"/>
+                                <rect x="90%" y="30%" width="10%" height="40%" rx="3" fill="#555"/>
+                                <rect x="5%" y="5%" width="80%" height="90%" rx="5" fill="url(#batteryGrad)" id="batteryFill"/>
+                                <text x="45%" y="55%" text-anchor="middle" fill="#fff" font-size="12" id="batteryText">电池 85%</text>
+                                <defs>
+                                    <linearGradient id="batteryGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#00ff88;stop-opacity:0.8" />
+                                        <stop offset="100%" style="stop-color:#00cc66;stop-opacity:0.8" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+
+                        <div class="component-layer" id="motherboardLayer">
+                            <!-- 主板组件 -->
+                            <svg class="component-svg" style="position: absolute; top: 15%; left: 10%; width: 80%; height: 70%;" id="motherboardComponent">
+                                <rect x="0" y="0" width="100%" height="100%" rx="5" fill="#1a472a" stroke="#2d5a3f" stroke-width="2"/>
+                                <!-- CPU -->
+                                <rect x="30%" y="20%" width="20%" height="15%" fill="#333" stroke="#00d4ff" stroke-width="1"/>
+                                <text x="40%" y="30%" text-anchor="middle" fill="#00d4ff" font-size="8">A17 Pro</text>
+                                <!-- 芯片组 -->
+                                <rect x="60%" y="40%" width="15%" height="10%" fill="#444" stroke="#ffd700" stroke-width="1"/>
+                                <rect x="20%" y="60%" width="25%" height="12%" fill="#444" stroke="#ff6b6b" stroke-width="1"/>
+                                <!-- 焊点 -->
+                                <circle cx="20%" cy="20%" r="3" fill="#silver"/>
+                                <circle cx="80%" cy="20%" r="3" fill="#silver"/>
+                                <circle cx="20%" cy="80%" r="3" fill="#silver"/>
+                                <circle cx="80%" cy="80%" r="3" fill="#silver"/>
+                                <text x="50%" y="95%" text-anchor="middle" fill="#888" font-size="10">主板</text>
+                            </svg>
+                            
+                            <!-- 螺丝钉 -->
+                            <div class="screw" style="top: 18%; left: 12%;" onclick="removeScrew(this)"></div>
+                            <div class="screw" style="top: 18%; right: 12%;" onclick="removeScrew(this)"></div>
+                            <div class="screw" style="bottom: 18%; left: 12%;" onclick="removeScrew(this)"></div>
+                            <div class="screw" style="bottom: 18%; right: 12%;" onclick="removeScrew(this)"></div>
+                        </div>
+
+                        <div class="component-layer" id="cameraLayer">
+                            <!-- 摄像头组件 -->
+                            <svg class="component-svg" style="position: absolute; top: 5%; left: 15%; width: 70%; height: 25%;" id="cameraComponent">
+                                <rect x="0" y="0" width="100%" height="100%" rx="15" fill="#222" stroke="#444" stroke-width="2"/>
+                                <!-- 三个摄像头 -->
+                                <circle cx="25%" cy="50%" r="18%" fill="#111" stroke="#333" stroke-width="2"/>
+                                <circle cx="25%" cy="50%" r="12%" fill="#0a1628"/>
+                                <circle cx="50%" cy="50%" r="18%" fill="#111" stroke="#333" stroke-width="2"/>
+                                <circle cx="50%" cy="50%" r="12%" fill="#0a1628"/>
+                                <circle cx="75%" cy="50%" r="18%" fill="#111" stroke="#333" stroke-width="2"/>
+                                <circle cx="75%" cy="50%" r="12%" fill="#0a1628"/>
+                                <!-- 激光雷达 -->
+                                <rect x="65%" y="75%" width="20%" height="15%" rx="3" fill="#111" stroke="#00d4ff" stroke-width="1"/>
+                                <text x="50%" y="90%" text-anchor="middle" fill="#888" font-size="10">影像系统</text>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="layer-indicator">
+                        <div class="layer-dot active" id="dot-screen" title="屏幕层"></div>
+                        <div class="layer-dot" id="dot-camera" title="摄像头层"></div>
+                        <div class="layer-dot" id="dot-battery" title="电池层"></div>
+                        <div class="layer-dot" id="dot-motherboard" title="主板层"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                    <button class="action-btn" style="flex: 1; min-width: 120px;" onclick="togglePower()">
+                        电源测试
+                    </button>
+                    <button class="action-btn" style="flex: 1; min-width: 120px; background: linear-gradient(45deg, #ff6b6b, #ee5a6f);" onclick="completeRepair()">
+                        完成维修
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧面板：工具与零件 -->
+            <div class="panel">
+                <div class="panel-title">
+                    <span>🔧</span>
+                    <span>工具箱</span>
+                </div>
+                
+                <div class="tools-grid" id="toolsGrid">
+                    <div class="tool-btn" onclick="selectTool('screwdriver')" id="tool-screwdriver">
+                        <span class="tool-icon">🪛</span>
+                        <span class="tool-name">精密螺丝刀</span>
+                    </div>
+                    <div class="tool-btn" onclick="selectTool('spudger')" id="tool-spudger">
+                        <span class="tool-icon">🔧</span>
+                        <span class="tool-name">撬棒</span>
+                    </div>
+                    <div class="tool-btn" onclick="selectTool('suction')" id="tool-suction">
+                        <span class="tool-icon">🧲</span>
+                        <span class="tool-name">吸盘</span>
+                    </div>
+                    <div class="tool-btn" onclick="selectTool('tweezers')" id="tool-tweezers">
+                        <span class="tool-icon">🔍</span>
+                        <span class="tool-name">镊子</span>
+                    </div>
+                    <div class="tool-btn" onclick="selectTool('heatgun')" id="tool-heatgun">
+                        <span class="tool-icon">🔥</span>
+                        <span class="tool-name">热风枪</span>
+                    </div>
+                    <div class="tool-btn" onclick="selectTool('multimeter')" id="tool-multimeter">
+                        <span class="tool-icon">📟</span>
+                        <span class="tool-name">万用表</span>
+                    </div>
+                    <div class="tool-btn" onclick="selectTool('soldering')" id="tool-soldering">
+                        <span class="tool-icon">🔨</span>
+                        <span class="tool-name">电烙铁</span>
+                    </div>
+                    <div class="tool-btn" onclick="selectTool('cleaner')" id="tool-cleaner">
+                        <span class="tool-icon">🧼</span>
+                        <span class="tool-name">清洁剂</span>
+                    </div>
+                </div>
+
+                <div class="panel-title" style="margin-top: 30px;">
+                    <span>📦</span>
+                    <span>零件库存</span>
+                </div>
+                
+                <div class="parts-inventory" id="partsInventory">
+                    <div class="part-card" onclick="selectPart('screen')" id="part-screen">
+                        <div class="part-icon">📱</div>
+                        <div class="part-name">屏幕总成</div>
+                        <div class="part-count" id="count-screen">3</div>
+                    </div>
+                    <div class="part-card" onclick="selectPart('battery')" id="part-battery">
+                        <div class="part-icon">🔋</div>
+                        <div class="part-name">电池</div>
+                        <div class="part-count" id="count-battery">5</div>
+                    </div>
+                    <div class="part-card" onclick="selectPart('camera')" id="part-camera">
+                        <div class="part-icon">📷</div>
+                        <div class="part-name">摄像头</div>
+                        <div class="part-count" id="count-camera">2</div>
+                    </div>
+                    <div class="part-card" onclick="selectPart('charging')" id="part-charging">
+                        <div class="part-icon">🔌</div>
+                        <div class="part-name">尾插排线</div>
+                        <div class="part-count" id="count-charging">4</div>
+                    </div>
+                    <div class="part-card" onclick="selectPart('motherboard')" id="part-motherboard">
+                        <div class="part-icon">🧩</div>
+                        <div class="part-name">主板</div>
+                        <div class="part-count" id="count-motherboard">1</div>
+                    </div>
+                </div>
+
+                <button class="action-btn" onclick="openShop()" style="background: linear-gradient(45deg, #ffd700, #ffaa00); color: #000;">
+                    购买零件
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        const gameState = {
+            money: 5000,
+            reputation: 100,
+            level: 1,
+            ordersCompleted: 0,
+            dailyOrders: 5,
+            currentTool: null,
+            selectedPart: null,
+            currentLayer: 'screen',
+            phoneState: {
+                isOn: false,
+                isBroken: true,
+                faultType: null,
+                components: {
+                    screen: { installed: true, broken: true, screws: 0 },
+                    battery: { installed: true, broken: false, health: 45 },
+                    camera: { installed: true, broken: false },
+                    motherboard: { installed: true, broken: false, screws: 4 },
+                    charging: { installed: true, broken: false }
+                }
+            },
+            inventory: {
+                screen: 3,
+                battery: 5,
+                camera: 2,
+                charging: 4,
+                motherboard: 1
+            },
+            customer: {
+                mood: 100,
+                patience: 100
+            }
+        };
+
+        // 故障类型定义
+        const faultTypes = [
+            { 
+                id: 'screen_crack', 
+                name: '屏幕碎裂', 
+                symptom: '屏幕显示异常，触摸失灵', 
+                component: 'screen',
+                repairCost: 800,
+                difficulty: 1
+            },
+            { 
+                id: 'battery_dead', 
+                name: '电池老化', 
+                symptom: '电池续航极差，频繁关机', 
+                component: 'battery',
+                repairCost: 300,
+                difficulty: 1
+            },
+            { 
+                id: 'camera_blur', 
+                name: '摄像头模糊', 
+                symptom: '拍照模糊，无法对焦', 
+                component: 'camera',
+                repairCost: 600,
+                difficulty: 2
+            },
+            { 
+                id: 'charging_issue', 
+                name: '无法充电', 
+                symptom: '插入充电器无反应', 
+                component: 'charging',
+                repairCost: 200,
+                difficulty: 2
+            },
+            { 
+                id: 'motherboard_short', 
+                name: '主板短路', 
+                symptom: '无法开机，发热严重', 
+                component: 'motherboard',
+                repairCost: 1500,
+                difficulty: 3
+            }
+        ];
+
+        // 客户对话
+        const customerDialogs = {
+            happy: ["太感谢了！你真是维修大师！", "手机修好了，价格也很合理！", "下次有问题还来找你！"],
+            neutral: ["希望能快点修好...", "修好后通知我一声。", "这个故障常见吗？"],
+            impatient: ["已经等了很久了...", "能不能快点？我赶时间！", "怎么还没好？"],
+            angry: ["你们到底会不会修？！", "我要投诉！", "退钱！我不修了！"]
+        };
+
+        // 初始化游戏
+        function startGame() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameContainer').style.display = 'block';
+            generateNewOrder();
+            addLog('游戏开始！接待第一位客户...', 'success');
+        }
+
+        // 生成新订单
+        function generateNewOrder() {
+            const fault = faultTypes[Math.floor(Math.random() * faultTypes.length)];
+            gameState.phoneState.faultType = fault;
+            gameState.phoneState.isBroken = true;
+            gameState.phoneState.isOn = false;
+            
+            // 重置组件状态
+            Object.keys(gameState.phoneState.components).forEach(key => {
+                gameState.phoneState.components[key].installed = true;
+                gameState.phoneState.components[key].broken = (key === fault.component);
+            });
+
+            // 设置特定故障状态
+            if (fault.id === 'screen_crack') {
+                gameState.phoneState.components.screen.broken = true;
+                document.getElementById('phoneScreen').classList.add('broken');
+            } else {
+                document.getElementById('phoneScreen').classList.remove('broken');
+            }
+
+            if (fault.id === 'battery_dead') {
+                gameState.phoneState.components.battery.health = 15;
+                document.getElementById('batteryFill').style.fill = 'url(#batteryGrad)';
+                document.getElementById('batteryText').textContent = '电池 15%';
+                document.getElementById('batteryText').setAttribute('fill', '#ff4444');
+            }
+
+            // 重置层
+            showLayer('screen');
+            document.getElementById('symptomList').innerHTML = `
+                <li class="symptom-item">
+                    <span>❓</span>
+                    <span>等待检测...</span>
+                </li>
+            `;
+            
+            updateCustomerDialog(`你好，我的手机${fault.symptom}，能帮我看看吗？`);
+            updateStats();
+        }
+
+        // 诊断功能
+        function diagnosePhone() {
+            const fault = gameState.phoneState.faultType;
+            const btn = document.getElementById('diagnoseBtn');
+            
+            btn.disabled = true;
+            btn.textContent = '诊断中...';
+            
+            // 模拟诊断过程
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 20;
+                addLog(`诊断进度: ${progress}%`);
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    btn.disabled = false;
+                    btn.textContent = '重新诊断';
+                    
+                    // 显示诊断结果
+                    document.getElementById('symptomList').innerHTML = `
+                        <li class="symptom-item">
+                            <span>🔴</span>
+                            <span>${fault.symptom}</span>
+                        </li>
+                        <li class="symptom-item">
+                            <span>🔧</span>
+                            <span>疑似故障: ${fault.name}</span>
+                        </li>
+                        <li class="symptom-item">
+                            <span>💡</span>
+                            <span>建议: 更换${getComponentName(fault.component)}</span>
+                        </li>
+                        <li class="symptom-item">
+                            <span>💰</span>
+                            <span>预估费用: ¥${fault.repairCost}</span>
+                        </li>
+                    `;
+                    
+                    addLog(`诊断完成: 发现${fault.name}`, 'success');
+                    showNotification(`诊断完成: ${fault.name}`, 'success');
+                    
+                    // 客户反应
+                    updateCustomerDialog("原来是这样...那麻烦你尽快修好它！");
+                }
+            }, 500);
+        }
+
+        // 获取组件中文名
+        function getComponentName(component) {
+            const names = {
+                screen: '屏幕总成',
+                battery: '电池',
+                camera: '摄像头模组',
+                charging: '尾插排线',
+                motherboard: '主板'
+            };
+            return names[component] || component;
+        }
+
+        // 选择工具
+        function selectTool(toolName) {
+            // 清除之前的选择
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (gameState.currentTool === toolName) {
+                gameState.currentTool = null;
+                addLog(`放下工具`);
+                return;
+            }
+            
+            gameState.currentTool = toolName;
+            document.getElementById(`tool-${toolName}`).classList.add('active');
+            addLog(`拿起工具: ${getToolName(toolName)}`);
+            
+            // 工具特定逻辑
+            if (toolName === 'multimeter') {
+                checkVoltage();
+            } else if (toolName === 'heatgun') {
+                addLog('热风枪预热中...温度达到180°C');
+            } else if (toolName === 'soldering') {
+                openSolderingGame();
+            }
+        }
+
+        // 获取工具中文名
+        function getToolName(tool) {
+            const names = {
+                screwdriver: '精密螺丝刀',
+                spudger: '撬棒',
+                suction: '吸盘',
+                tweezers: '镊子',
+                heatgun: '热风枪',
+                multimeter: '万用表',
+                soldering: '电烙铁',
+                cleaner: '清洁剂'
+            };
+            return names[tool] || tool;
+        }
+
+        // 选择零件
+        function selectPart(partName) {
+            document.querySelectorAll('.part-card').forEach(card => card.classList.remove('selected'));
+            
+            if (gameState.selectedPart === partName) {
+                gameState.selectedPart = null;
+                addLog(`取消选择零件`);
+                return;
+            }
+            
+            if (gameState.inventory[partName] <= 0) {
+                showNotification('库存不足！请购买零件', 'error');
+                return;
+            }
+            
+            gameState.selectedPart = partName;
+            document.getElementById(`part-${partName}`).classList.add('selected');
+            addLog(`选择零件: ${getComponentName(partName)}`);
+            
+            // 如果当前层匹配，提供安装选项
+            if (partName === gameState.currentLayer && !gameState.phoneState.components[partName].installed) {
+                installPart(partName);
+            }
+        }
+
+        // 显示特定层
+        function showLayer(layerName) {
+            document.querySelectorAll('.component-layer').forEach(layer => layer.classList.remove('active'));
+            document.querySelectorAll('.layer-dot').forEach(dot => dot.classList.remove('active'));
+            
+            const layerMap = {
+                'screen': 'screenLayer',
+                'battery': 'batteryLayer',
+                'motherboard': 'motherboardLayer',
+                'camera': 'cameraLayer'
+            };
+            
+            if (layerMap[layerName]) {
+                document.getElementById(layerMap[layerName]).classList.add('active');
+                document.getElementById(`dot-${layerName}`).classList.add('active');
+                gameState.currentLayer = layerName;
+            }
+        }
+
+        // 移除螺丝
+        function removeScrew(screwElement) {
+            if (gameState.currentTool !== 'screwdriver') {
+                showNotification('请使用精密螺丝刀！', 'error');
+                addLog('错误: 需要使用螺丝刀移除螺丝', 'error');
+                return;
+            }
+            
+            screwElement.classList.add('removed');
+            addLog('移除螺丝');
+            
+            // 创建粒子效果
+            createParticles(screwElement, '🔩');
+            
+            // 检查是否所有螺丝都移除
+            const layer = gameState.currentLayer;
+            const screws = document.querySelectorAll(`#${layer}Layer .screw:not(.removed)`);
+            
+            if (screws.length === 0) {
+                addLog(`${getComponentName(layer)}螺丝已全部移除，可以拆卸`, 'success');
+                showNotification('可以拆卸组件了', 'success');
+            }
+        }
+
+        // 拆卸组件
+        function removeComponent(componentName) {
+            const component = gameState.phoneState.components[componentName];
+            
+            if (componentName === 'motherboard' || componentName === 'screen') {
+                // 检查螺丝
+                const screws = document.querySelectorAll(`#${componentName}Layer .screw:not(.removed)`);
+                if (screws.length > 0) {
+                    showNotification('请先移除所有螺丝！', 'error');
+                    return;
+                }
+            }
+            
+            if (gameState.currentTool !== 'spudger' && gameState.currentTool !== 'suction') {
+                showNotification('请使用撬棒或吸盘！', 'error');
+                return;
+            }
+            
+            component.installed = false;
+            document.getElementById(`${componentName}Component`).classList.add('removed');
+            addLog(`拆卸${getComponentName(componentName)}`, 'success');
+            createParticles(document.getElementById(`${componentName}Component`), '✨');
+            
+            // 显示下一层或空层
+            setTimeout(() => {
+                document.getElementById(`${componentName}Layer`).classList.remove('active');
+                document.getElementById(`dot-${componentName}`).classList.remove('active');
+                document.getElementById(`dot-${componentName}`).style.background = '#444';
+            }, 500);
+        }
+
+        // 安装零件
+        function installPart(partName) {
+            if (!gameState.selectedPart || gameState.selectedPart !== partName) {
+                showNotification('请先选择正确的零件！', 'error');
+                return;
+            }
+            
+            // 减少库存
+            gameState.inventory[partName]--;
+            document.getElementById(`count-${partName}`).textContent = gameState.inventory[partName];
+            
+            // 更新状态
+            gameState.phoneState.components[partName].installed = true;
+            gameState.phoneState.components[partName].broken = false;
+            
+            // 恢复显示
+            document.getElementById(`${partName}Component`).classList.remove('removed');
+            document.getElementById(`${partName}Layer`).classList.add('active');
+            document.getElementById(`dot-${partName}`).classList.add('active');
+            document.getElementById(`dot-${partName}`).style.background = '#00d4ff';
+            
+            // 如果是屏幕，修复碎屏效果
+            if (partName === 'screen') {
+                document.getElementById('phoneScreen').classList.remove('broken');
+            }
+            
+            // 如果是电池，恢复电量显示
+            if (partName === 'battery') {
+                gameState.phoneState.components.battery.health = 100;
+                document.getElementById('batteryText').textContent = '电池 100%';
+                document.getElementById('batteryText').setAttribute('fill', '#fff');
+            }
+            
+            gameState.selectedPart = null;
+            document.querySelectorAll('.part-card').forEach(card => card.classList.remove('selected'));
+            
+            addLog(`安装新的${getComponentName(partName)}`, 'success');
+            showNotification('零件安装成功！', 'success');
+            createParticles(document.getElementById(`${partName}Component`), '🔧');
+        }
+
+        // 电源测试
+        function togglePower() {
+            const phone = gameState.phoneState;
+            
+            if (!phone.components.screen.installed) {
+                showNotification('屏幕未安装！', 'error');
+                addLog('电源测试失败: 屏幕组件缺失', 'error');
+                return;
+            }
+            
+            if (!phone.components.battery.installed) {
+                showNotification('电池未安装！', 'error');
+                addLog('电源测试失败: 电池组件缺失', 'error');
+                return;
+            }
+            
+            if (phone.components.motherboard.broken) {
+                showNotification('主板存在故障！', 'error');
+                addLog('电源测试失败: 主板短路', 'error');
+                document.getElementById('deviceStatus').textContent = '主板故障';
+                document.getElementById('deviceStatus').style.color = '#ff4444';
+                return;
+            }
+            
+            phone.isOn = !phone.isOn;
+            const screen = document.getElementById('phoneScreen');
+            
+            if (phone.isOn) {
+                screen.classList.add('on');
+                document.getElementById('deviceStatus').textContent = '正常运行';
+                document.getElementById('deviceStatus').style.color = '#00ff88';
+                addLog('电源测试通过: 设备启动正常', 'success');
+                
+                // 检查是否所有故障都修复
+                if (checkRepairComplete()) {
+                    showNotification('所有故障已修复！可以交付了', 'success');
+                    updateCustomerDialog("哇！手机修好了！太感谢了！");
+                }
+            } else {
+                screen.classList.remove('on');
+                document.getElementById('deviceStatus').textContent = '已关机';
+                document.getElementById('deviceStatus').style.color = '#aaa';
+                addLog('设备关机');
+            }
+        }
+
+        // 检查维修是否完成
+        function checkRepairComplete() {
+            const components = gameState.phoneState.components;
+            const fault = gameState.phoneState.faultType;
+            
+            // 检查主要故障是否修复
+            if (fault && components[fault.component].broken) {
+                return false;
+            }
+            
+            // 检查基本功能
+            return components.screen.installed && !components.screen.broken &&
+                   components.battery.installed && !components.battery.broken &&
+                   components.motherboard.installed && !components.motherboard.broken;
+        }
+
+        // 完成维修
+        function completeRepair() {
+            if (!checkRepairComplete()) {
+                showNotification('还有故障未修复！请继续检查', 'error');
+                addLog('无法完成: 存在未修复的故障', 'error');
+                return;
+            }
+            
+            const fault = gameState.phoneState.faultType;
+            const earnings = fault.repairCost;
+            const cost = Math.floor(earnings * 0.3); // 零件成本
+            
+            // 计算收益
+            gameState.money += (earnings - cost);
+            gameState.reputation += 10;
+            gameState.ordersCompleted++;
+            
+            // 客户满意度奖励
+            if (gameState.customer.mood > 80) {
+                gameState.money += 50; // 小费
+                addLog('客户非常满意，获得小费 ¥50', 'success');
+            }
+            
+            updateStats();
+            addLog(`维修完成！收入: ¥${earnings}, 成本: ¥${cost}, 净利润: ¥${earnings - cost}`, 'success');
+            showNotification(`维修完成！获得 ¥${earnings - cost}`, 'success');
+            
+            // 检查升级
+            if (gameState.ordersCompleted % 5 === 0) {
+                gameState.level++;
+                showNotification(`升级了！当前等级: Lv.${gameState.level}`, 'success');
+                addLog(`恭喜升级！维修等级提升至 ${gameState.level}`, 'success');
+            }
+            
+            // 延迟后生成新订单
+            setTimeout(() => {
+                if (gameState.ordersCompleted < gameState.dailyOrders) {
+                    generateNewOrder();
+                    updateCustomerDialog("你好，我听说你技术不错，能帮我看看手机吗？");
+                } else {
+                    endDay();
+                }
+            }, 2000);
+        }
+
+        // 结束一天
+        function endDay() {
+            addLog('今日营业结束！', 'success');
+            showNotification(`今日完成 ${gameState.ordersCompleted} 个订单，收入 ¥${gameState.money - 5000}`, 'success');
+            
+            // 重置每日订单
+            gameState.ordersCompleted = 0;
+            gameState.dailyOrders = 5 + Math.floor(gameState.level / 2);
+            
+            setTimeout(() => {
+                generateNewOrder();
+                addLog('新的一天开始了！', 'success');
+            }, 3000);
+        }
+
+        // 万用表检测
+        function checkVoltage() {
+            const battery = gameState.phoneState.components.battery;
+            const motherboard = gameState.phoneState.components.motherboard;
+            
+            addLog('万用表检测中...');
+            
+            setTimeout(() => {
+                if (!battery.installed) {
+                    addLog('检测失败: 电池未安装', 'error');
+                } else {
+                    addLog(`电池电压: ${3.0 + (battery.health / 100)}V ${battery.health < 20 ? '(电压过低)' : '(正常)'}`);
+                }
+                
+                if (!motherboard.installed) {
+                    addLog('检测失败: 主板未安装', 'error');
+                } else if (motherboard.broken) {
+                    addLog('主板检测: 发现短路点 (电阻异常)', 'error');
+                } else {
+                    addLog('主板检测: 电路正常', 'success');
+                }
+            }, 1000);
+        }
+
+        // 打开焊接小游戏
+        function openSolderingGame() {
+            const overlay = document.getElementById('minigameOverlay');
+            const content = document.getElementById('minigameContent');
+            
+            content.innerHTML = `
+                <h2 style="text-align: center; margin-bottom: 20px; color: #00d4ff;">精密焊接</h2>
+                <p style="text-align: center; color: #aaa; margin-bottom: 20px;">
+                    移动鼠标控制烙铁，点击红色焊点进行修复<br>
+                    修复所有焊点完成主板维修
+                </p>
+                <div class="soldering-game" id="solderingArea">
+                    <div class="circuit-board"></div>
+                    <div class="iron-cursor" id="ironCursor">🔥</div>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <div>剩余焊点: <span id="solderCount" style="color: #ff4444; font-size: 1.5em; font-weight: bold;">5</span></div>
+                    <div style="margin-top: 10px; color: #aaa;">进度: <span id="solderProgress">0</span>/5</div>
+                </div>
+            `;
+            
+            overlay.classList.add('active');
+            
+            // 生成焊点
+            const area = document.getElementById('solderingArea');
+            const points = [];
+            for (let i = 0; i < 5; i++) {
+                const point = document.createElement('div');
+                point.className = 'solder-point';
+                point.style.left = `${20 + Math.random() * 60}%`;
+                point.style.top = `${20 + Math.random() * 60}%`;
+                point.onclick = function() {
+                    fixSolderPoint(this);
+                };
+                area.appendChild(point);
+                points.push(point);
+            }
+            
+            // 鼠标跟踪
+            area.addEventListener('mousemove', (e) => {
+                const rect = area.getBoundingClientRect();
+                const iron = document.getElementById('ironCursor');
+                iron.style.left = (e.clientX - rect.left) + 'px';
+                iron.style.top = (e.clientY - rect.top) + 'px';
+            });
+        }
+
+        // 修复焊点
+        function fixSolderPoint(point) {
+            if (point.classList.contains('fixed')) return;
+            
+            point.classList.add('fixed');
+            createParticles(point, '✨');
+            
+            const fixed = document.querySelectorAll('.solder-point.fixed').length;
+            const total = document.querySelectorAll('.solder-point').length;
+            
+            document.getElementById('solderCount').textContent = total - fixed;
+            document.getElementById('solderProgress').textContent = fixed;
+            
+            if (fixed === total) {
+                setTimeout(() => {
+                    addLog('焊接完成！主板故障已修复', 'success');
+                    gameState.phoneState.components.motherboard.broken = false;
+                    closeMinigame();
+                    showNotification('主板修复成功！', 'success');
+                }, 500);
+            }
+        }
+
+        // 关闭小游戏
+        function closeMinigame() {
+            document.getElementById('minigameOverlay').classList.remove('active');
+        }
+
+        // 打开商店
+        function openShop() {
+            const prices = {
+                screen: 400,
+                battery: 150,
+                camera: 350,
+                charging: 100,
+                motherboard: 800
+            };
+            
+            let shopHTML = '<h2 style="text-align: center; margin-bottom: 20px; color: #00d4ff;">零件商店</h2>';
+            shopHTML += '<div style="display: grid; gap: 15px;">';
+            
+            Object.keys(prices).forEach(part => {
+                shopHTML += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid #444;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="font-size: 2em;">${getPartIcon(part)}</span>
+                            <div>
+                                <div style="font-weight: bold;">${getComponentName(part)}</div>
+                                <div style="color: #aaa; font-size: 0.9em;">库存: ${gameState.inventory[part]}</div>
+                            </div>
+                        </div>
+                        <button onclick="buyPart('${part}', ${prices[part]})" style="background: linear-gradient(45deg, #00d4ff, #0099cc); border: none; color: #fff; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                            ¥${prices[part]}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            shopHTML += '</div>';
+            shopHTML += `<div style="text-align: center; margin-top: 20px; color: #aaa;">当前资金: ¥${gameState.money}</div>`;
+            
+            const overlay = document.getElementById('minigameOverlay');
+            const content = document.getElementById('minigameContent');
+            content.innerHTML = shopHTML;
+            overlay.classList.add('active');
+        }
+
+        // 购买零件
+        function buyPart(part, price) {
+            if (gameState.money < price) {
+                showNotification('资金不足！', 'error');
+                return;
+            }
+            
+            gameState.money -= price;
+            gameState.inventory[part]++;
+            
+            updateStats();
+            showNotification(`购买${getComponentName(part)}成功！`, 'success');
+            addLog(`购买零件: ${getComponentName(part)} (-¥${price})`);
+            
+            // 刷新商店显示
+            openShop();
+        }
+
+        // 获取零件图标
+        function getPartIcon(part) {
+            const icons = {
+                screen: '📱',
+                battery: '🔋',
+                camera: '📷',
+                charging: '🔌',
+                motherboard: '🧩'
+            };
+            return icons[part] || '🔧';
+        }
+
+        // 更新统计
+        function updateStats() {
+            document.getElementById('money').textContent = `¥${gameState.money}`;
+            document.getElementById('reputation').textContent = gameState.reputation;
+            document.getElementById('level').textContent = `Lv.${gameState.level}`;
+            document.getElementById('orders').textContent = `${gameState.ordersCompleted}/${gameState.dailyOrders}`;
+            
+            // 更新库存显示
+            Object.keys(gameState.inventory).forEach(part => {
+                const el = document.getElementById(`count-${part}`);
+                if (el) el.textContent = gameState.inventory[part];
+            });
+        }
+
+        // 更新客户对话
+        function updateCustomerDialog(text) {
+            const dialog = document.getElementById('customerDialog');
+            dialog.style.animation = 'none';
+            setTimeout(() => {
+                dialog.textContent = text;
+                dialog.style.animation = 'fadeIn 0.5s';
+            }, 10);
+            
+            // 更新表情
+            updateCustomerMood();
+        }
+
+        // 更新客户心情表情
+        function updateCustomerMood() {
+            const mood = gameState.customer.mood;
+            let emoji = '😊';
+            if (mood < 30) emoji = '😡';
+            else if (mood < 60) emoji = '😤';
+            else if (mood < 80) emoji = '😐';
+            
+            document.getElementById('customerMood').textContent = emoji;
+        }
+
+        // 添加日志
+        function addLog(message, type = 'normal') {
+            const log = document.getElementById('repairLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const time = new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+            entry.textContent = `[${time}] ${message}`;
+            log.insertBefore(entry, log.firstChild);
+            
+            // 限制日志数量
+            while (log.children.length > 20) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'normal') {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.className = 'notification show ' + type;
+            
+            setTimeout(() => {
+                notif.classList.remove('show');
+            }, 3000);
+        }
+
+        // 创建粒子效果
+        function createParticles(element, emoji) {
+            const rect = element.getBoundingClientRect();
+            for (let i = 0; i < 5; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = emoji;
+                particle.style.left = rect.left + rect.width / 2 + (Math.random() - 0.5) * 50 + 'px';
+                particle.style.top = rect.top + rect.height / 2 + (Math.random() - 0.5) * 50 + 'px';
+                particle.style.fontSize = '1.5em';
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        // 点击组件拆卸
+        document.getElementById('screenComponent')?.addEventListener('click', () => {
+            if (gameState.currentLayer === 'screen') {
+                removeComponent('screen');
+            }
+        });
+
+        document.getElementById('batteryComponent')?.addEventListener('click', () => {
+            if (gameState.currentLayer === 'battery') {
+                removeComponent('battery');
+            }
+        });
+
+        document.getElementById('cameraComponent')?.addEventListener('click', () => {
+            if (gameState.currentLayer === 'camera') {
+                removeComponent('camera');
+            }
+        });
+
+        document.getElementById('motherboardComponent')?.addEventListener('click', () => {
+            if (gameState.currentLayer === 'motherboard') {
+                // 如果主板损坏，进入焊接游戏
+                if (gameState.phoneState.components.motherboard.broken) {
+                    openSolderingGame();
+                } else {
+                    removeComponent('motherboard');
+                }
+            }
+        });
+
+        // 层切换点击
+        document.querySelectorAll('.layer-dot').forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                const layers = ['screen', 'camera', 'battery', 'motherboard'];
+                showLayer(layers[index]);
+            });
+        });
+
+        // 初始化
+        window.onload = () => {
+            // 预加载一些交互
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeMinigame();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
