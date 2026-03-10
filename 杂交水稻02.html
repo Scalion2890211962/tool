@@ -1,0 +1,2240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>稻梦工程师：世界版 - 全球粮食危机模拟器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .game-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 头部样式 */
+        header {
+            text-align: center;
+            padding: 20px 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,215,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        h1 {
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #FFD700, #FFA500, #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 0 30px rgba(255,215,0,0.5);
+        }
+
+        .subtitle {
+            color: #a8d8ea;
+            margin-top: 10px;
+            font-size: 1.1em;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 统计栏 */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover::after {
+            transform: scaleX(1);
+        }
+
+        .stat-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #a8d8ea;
+            margin-top: 5px;
+        }
+
+        /* 主布局 */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 面板样式 */
+        .panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .panel h2 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,215,0,0.3);
+        }
+
+        /* 基因库 */
+        .gene-pool {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .gene-pool::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .gene-pool::-webkit-scrollbar-thumb {
+            background: rgba(255,215,0,0.5);
+            border-radius: 3px;
+        }
+
+        .gene-item {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gene-item:hover {
+            transform: translateX(5px);
+            border-color: rgba(255,215,0,0.5);
+            background: rgba(255,215,0,0.1);
+        }
+
+        .gene-item.selected {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.15);
+            box-shadow: 0 0 15px rgba(0,255,136,0.3);
+        }
+
+        .gene-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .gene-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .gene-rarity {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .rarity-common { background: #95a5a6; color: #fff; }
+        .rarity-rare { background: #3498db; color: #fff; }
+        .rarity-epic { background: #9b59b6; color: #fff; }
+        .rarity-legendary { background: linear-gradient(45deg, #e74c3c, #f39c12); color: #fff; }
+        .rarity-mythic { background: linear-gradient(45deg, #00ff88, #00ccff); color: #000; }
+
+        .gene-traits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            font-size: 0.8em;
+        }
+
+        .trait-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            color: #a8d8ea;
+        }
+
+        /* 实验室区域 */
+        .lab-container {
+            text-align: center;
+        }
+
+        .hybrid-workbench {
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            position: relative;
+            min-height: 300px;
+        }
+
+        .dna-helix {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 200px;
+            opacity: 0.1;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 200'%3E%3Cpath d='M20,0 Q50,50 80,100 T20,200' fill='none' stroke='%23FFD700' stroke-width='3'/%3E%3Cpath d='M80,0 Q50,50 20,100 T80,200' fill='none' stroke='%23FFD700' stroke-width='3'/%3E%3C/svg%3E");
+            animation: dnaRotate 10s linear infinite;
+        }
+
+        @keyframes dnaRotate {
+            from { transform: translate(-50%, -50%) rotateY(0deg); }
+            to { transform: translate(-50%, -50%) rotateY(360deg); }
+        }
+
+        .hybrid-slots {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .parent-slot {
+            width: 180px;
+            height: 220px;
+            background: rgba(255,255,255,0.05);
+            border: 3px dashed rgba(255,255,255,0.3);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .parent-slot.filled {
+            border-style: solid;
+            border-color: #FFD700;
+            background: rgba(255,215,0,0.1);
+            box-shadow: 0 0 20px rgba(255,215,0,0.3);
+        }
+
+        .slot-number {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 30px;
+            height: 30px;
+            background: rgba(255,215,0,0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .slot-content {
+            text-align: center;
+        }
+
+        .slot-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .slot-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .slot-traits {
+            font-size: 0.8em;
+            color: #a8d8ea;
+        }
+
+        .hybrid-connector {
+            font-size: 2.5em;
+            color: #FFD700;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .hybrid-btn {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #1e3c72;
+            border: none;
+            padding: 15px 50px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(255,215,0,0.4);
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hybrid-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 30px rgba(255,215,0,0.6);
+        }
+
+        .hybrid-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .hybrid-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+        }
+
+        .hybrid-btn:hover::after {
+            left: 100%;
+        }
+
+        /* 试验田 */
+        .field-container {
+            margin-top: 20px;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .field-plot {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #654321 0%, #8B4513 100%);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .field-plot::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.1) 2px,
+                rgba(0,0,0,0.1) 4px
+            );
+        }
+
+        .field-plot:hover {
+            transform: scale(1.05);
+            border-color: #FFD700;
+            box-shadow: 0 0 15px rgba(255,215,0,0.3);
+        }
+
+        .field-plot.planted {
+            background: linear-gradient(135deg, #228B22 0%, #32CD32 100%);
+        }
+
+        .field-plot.mature {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            animation: goldenGlow 2s infinite;
+        }
+
+        @keyframes goldenGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+            50% { box-shadow: 0 0 30px rgba(255,215,0,0.8); }
+        }
+
+        .plot-rice {
+            font-size: 2.5em;
+            z-index: 1;
+            transition: all 0.3s;
+        }
+
+        .field-plot.mature .plot-rice {
+            animation: sway 2s ease-in-out infinite;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .plot-info {
+            font-size: 0.7em;
+            margin-top: 5px;
+            z-index: 1;
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        /* 世界地图区域 */
+        .world-section {
+            margin-top: 30px;
+        }
+
+        .map-container {
+            background: rgba(0,0,0,0.4);
+            border-radius: 20px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .world-map-svg {
+            width: 100%;
+            height: auto;
+            max-height: 500px;
+        }
+
+        .region-path {
+            fill: rgba(231, 76, 60, 0.6);
+            stroke: rgba(255,255,255,0.3);
+            stroke-width: 1;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .region-path:hover {
+            fill: rgba(231, 76, 60, 0.8);
+            stroke: #FFD700;
+            stroke-width: 2;
+            filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.8));
+        }
+
+        .region-path.solved {
+            fill: rgba(0, 255, 136, 0.6);
+        }
+
+        .region-path.solved:hover {
+            fill: rgba(0, 255, 136, 0.8);
+            filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.8));
+        }
+
+        .region-label {
+            fill: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .crisis-indicator {
+            fill: #e74c3c;
+            animation: crisisPulse 2s infinite;
+        }
+
+        @keyframes crisisPulse {
+            0%, 100% { opacity: 0.6; r: 3; }
+            50% { opacity: 1; r: 6; }
+        }
+
+        .region-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .region-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 15px;
+            border-left: 4px solid #e74c3c;
+            transition: all 0.3s;
+        }
+
+        .region-card.solved {
+            border-left-color: #00ff88;
+            background: rgba(0,255,136,0.1);
+        }
+
+        .region-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .region-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .region-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .crisis-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .crisis-extreme { background: #c0392b; }
+        .crisis-high { background: #e74c3c; }
+        .crisis-medium { background: #f39c12; }
+        .crisis-low { background: #27ae60; }
+
+        .region-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 0.85em;
+            margin: 10px 0;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.05);
+            padding: 5px 10px;
+            border-radius: 8px;
+        }
+
+        .deploy-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            border: none;
+            border-radius: 8px;
+            color: #1e3c72;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .deploy-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+        }
+
+        .deploy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 科技树 */
+        .tech-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .tech-item {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .tech-item:hover:not(.unlocked) {
+            border-color: #FFD700;
+            background: rgba(255,215,0,0.1);
+        }
+
+        .tech-item.unlocked {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.15);
+        }
+
+        .tech-item.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .tech-info h4 {
+            color: #FFD700;
+            margin-bottom: 5px;
+        }
+
+        .tech-desc {
+            font-size: 0.85em;
+            color: #a8d8ea;
+        }
+
+        .tech-cost {
+            text-align: right;
+        }
+
+        .cost-amount {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        /* 气候面板 */
+        .climate-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .climate-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .climate-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .climate-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid #FFD700;
+            box-shadow: 0 0 50px rgba(255,215,0,0.3);
+            animation: modalIn 0.3s;
+        }
+
+        @keyframes modalIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5em;
+            color: #FFD700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5em;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255,255,255,0.1);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        /* 品种详情卡 */
+        .variety-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .variety-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .variety-name {
+            font-size: 1.3em;
+            color: #FFD700;
+        }
+
+        .variety-badge {
+            background: rgba(255,215,0,0.2);
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+
+        .trait-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .trait-item {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .trait-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .trait-bar-bg {
+            height: 8px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .trait-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trait-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* 通知系统 */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+        }
+
+        .notification {
+            background: rgba(0,0,0,0.9);
+            border-left: 4px solid #FFD700;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            animation: notifyIn 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes notifyIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification.success { border-left-color: #00ff88; }
+        .notification.warning { border-left-color: #f39c12; }
+        .notification.danger { border-left-color: #e74c3c; }
+
+        /* 时间轴 */
+        .timeline {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(0,0,0,0.6);
+            padding: 15px 25px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,215,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .year-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .season-indicator {
+            font-size: 1.2em;
+        }
+
+        /* 事件弹窗 */
+        .event-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .event-overlay.active {
+            display: flex;
+        }
+
+        .event-card {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            padding: 30px;
+            text-align: center;
+            border: 2px solid;
+            animation: eventIn 0.5s;
+        }
+
+        @keyframes eventIn {
+            from { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+            to { transform: scale(1) rotate(0); opacity: 1; }
+        }
+
+        .event-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .event-title {
+            font-size: 1.8em;
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+
+        .event-desc {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            color: #a8d8ea;
+        }
+
+        .event-choices {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .event-btn {
+            padding: 12px 30px;
+            border: 2px solid #FFD700;
+            background: transparent;
+            color: #FFD700;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .event-btn:hover {
+            background: #FFD700;
+            color: #1e3c72;
+            transform: scale(1.05);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8em; }
+            .main-grid { grid-template-columns: 1fr; }
+            .field-grid { grid-template-columns: repeat(3, 1fr); }
+            .hybrid-slots { flex-direction: column; gap: 20px; }
+            .timeline { bottom: 10px; right: 10px; padding: 10px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <h1>🌾 稻梦工程师：世界版</h1>
+            <p class="subtitle">成为世界的工程师 —— 用科学终结饥饿，让杂交水稻覆盖全球</p>
+        </header>
+
+        <!-- 统计栏 -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-icon">🔬</div>
+                <div class="stat-value" id="researchPoints">0</div>
+                <div class="stat-label">研究点数 (RP)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🌾</div>
+                <div class="stat-value" id="varietyCount">0</div>
+                <div class="stat-label">培育品种</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="savedLives">0</div>
+                <div class="stat-label">拯救人口(亿)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🌍</div>
+                <div class="stat-value" id="solvedRegions">0/12</div>
+                <div class="stat-label">解决地区</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value" id="achievementScore">0</div>
+                <div class="stat-label">成就点数</div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-grid">
+            <!-- 左侧面板：基因库 -->
+            <div class="panel">
+                <h2>🧬 全球种质资源库</h2>
+                <div class="gene-pool" id="genePool"></div>
+                
+                <div class="climate-panel">
+                    <h3 style="color: #FFD700; margin-bottom: 10px;">🌤️ 当前气候</h3>
+                    <div class="climate-indicator">
+                        <span>🌡️</span>
+                        <div class="climate-bar">
+                            <div class="climate-fill" id="tempBar" style="width: 50%; background: #e74c3c;"></div>
+                        </div>
+                        <span id="tempValue">25°C</span>
+                    </div>
+                    <div class="climate-indicator">
+                        <span>💧</span>
+                        <div class="climate-bar">
+                            <div class="climate-fill" id="rainBar" style="width: 60%; background: #3498db;"></div>
+                        </div>
+                        <span id="rainValue">60%</span>
+                    </div>
+                    <div style="font-size: 0.85em; color: #a8d8ea; margin-top: 10px;" id="climateEvent">
+                        气候正常，适宜育种
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中间面板：实验室 -->
+            <div class="panel lab-container">
+                <h2>⚗️ 杂交实验室</h2>
+                
+                <div class="hybrid-workbench">
+                    <div class="dna-helix"></div>
+                    
+                    <div class="hybrid-slots">
+                        <div class="parent-slot" id="slot1" onclick="selectSlot(1)">
+                            <div class="slot-number">1</div>
+                            <div class="slot-content">
+                                <div class="slot-icon">🌱</div>
+                                <div class="slot-name">选择亲本 A</div>
+                                <div class="slot-traits">点击选择种质</div>
+                            </div>
+                        </div>
+                        
+                        <div class="hybrid-connector">⚡</div>
+                        
+                        <div class="parent-slot" id="slot2" onclick="selectSlot(2)">
+                            <div class="slot-number">2</div>
+                            <div class="slot-content">
+                                <div class="slot-icon">🌱</div>
+                                <div class="slot-name">选择亲本 B</div>
+                                <div class="slot-traits">点击选择种质</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="hybrid-btn" id="hybridBtn" onclick="performHybridization()" disabled>
+                        🔬 开始基因重组
+                    </button>
+                </div>
+
+                <div class="field-container">
+                    <h3 style="color: #FFD700; margin-bottom: 15px;">🌾 田间试验站 (12块试验田)</h3>
+                    <div class="field-grid" id="fieldGrid"></div>
+                </div>
+            </div>
+
+            <!-- 右侧面板：科技树 -->
+            <div class="panel">
+                <h2>🔬 农业科技树</h2>
+                <div class="tech-grid" id="techTree"></div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                    <h4 style="color: #FFD700; margin-bottom: 10px;">📊 当前任务</h4>
+                    <div id="currentMission" style="font-size: 0.9em; color: #a8d8ea;">
+                        培育第一个杂交品种并种植到试验田
+                    </div>
+                    <div style="margin-top: 10px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                        <div id="missionProgress" style="width: 0%; height: 100%; background: #FFD700; transition: width 0.5s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 世界地图区域 -->
+        <div class="world-section">
+            <div class="panel">
+                <h2>🌍 全球粮食危机实时地图</h2>
+                <p style="color: #a8d8ea; margin-bottom: 15px; font-size: 0.9em;">
+                    红色区域表示粮食危机严重，绿色表示已解决。点击区域查看详情并部署你的品种。
+                </p>
+                
+                <div class="map-container">
+                    <svg class="world-map-svg" viewBox="0 0 1000 500" id="worldMap">
+                        <!-- 简化的世界地图路径 -->
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        
+                        <!-- 东亚 -->
+                        <path class="region-path" id="region-eastasia" data-name="东亚季风区" 
+                              d="M 700 150 Q 750 120 800 150 L 820 200 L 780 250 L 720 220 Z" 
+                              onclick="showRegionDetails('eastasia')"/>
+                        <text class="region-label" x="760" y="190">东亚</text>
+                        <circle class="crisis-indicator" cx="760" cy="170" id="crisis-eastasia"/>
+                        
+                        <!-- 南亚 -->
+                        <path class="region-path" id="region-southasia" data-name="南亚次大陆"
+                              d="M 680 220 L 720 220 L 740 280 L 700 300 L 660 260 Z"
+                              onclick="showRegionDetails('southasia')"/>
+                        <text class="region-label" x="700" y="260">南亚</text>
+                        <circle class="crisis-indicator" cx="700" cy="240" id="crisis-southasia"/>
+                        
+                        <!-- 东南亚 -->
+                        <path class="region-path" id="region-southeast" data-name="东南亚群岛"
+                              d="M 750 280 L 850 260 L 880 320 L 800 340 L 760 300 Z"
+                              onclick="showRegionDetails('southeast')"/>
+                        <text class="region-label" x="810" y="300">东南亚</text>
+                        <circle class="crisis-indicator" cx="810" cy="280" id="crisis-southeast"/>
+                        
+                        <!-- 中亚 -->
+                        <path class="region-path" id="region-centralasia" data-name="中亚干旱区"
+                              d="M 600 150 L 680 150 L 680 220 L 620 200 Z"
+                              onclick="showRegionDetails('centralasia')"/>
+                        <text class="region-label" x="640" y="185">中亚</text>
+                        <circle class="crisis-indicator" cx="640" cy="165" id="crisis-centralasia"/>
+                        
+                        <!-- 中东 -->
+                        <path class="region-path" id="region-middleeast" data-name="中东沙漠区"
+                              d="M 520 200 L 600 180 L 620 250 L 550 260 Z"
+                              onclick="showRegionDetails('middleeast')"/>
+                        <text class="region-label" x="570" y="225">中东</text>
+                        <circle class="crisis-indicator" cx="570" cy="205" id="crisis-middleeast"/>
+                        
+                        <!-- 撒哈拉 -->
+                        <path class="region-path" id="region-sahara" data-name="撒哈拉以南"
+                              d="M 450 280 L 550 260 L 580 380 L 480 400 L 420 320 Z"
+                              onclick="showRegionDetails('sahara')"/>
+                        <text class="region-label" x="500" y="330">撒哈拉以南</text>
+                        <circle class="crisis-indicator" cx="500" cy="310" id="crisis-sahara"/>
+                        
+                        <!-- 东非 -->
+                        <path class="region-path" id="region-eastafria" data-name="东非高原"
+                              d="M 580 300 L 650 280 L 680 360 L 620 380 Z"
+                              onclick="showRegionDetails('eastafrica')"/>
+                        <text class="region-label" x="630" y="330">东非</text>
+                        <circle class="crisis-indicator" cx="630" cy="310" id="crisis-eastafria"/>
+                        
+                        <!-- 拉美 -->
+                        <path class="region-path" id="region-latam" data-name="拉丁美洲"
+                              d="M 200 300 L 300 280 L 320 400 L 240 420 L 180 350 Z"
+                              onclick="showRegionDetails('latam')"/>
+                        <text class="region-label" x="250" y="350">拉丁美洲</text>
+                        <circle class="crisis-indicator" cx="250" cy="330" id="crisis-latam"/>
+                        
+                        <!-- 加勒比 -->
+                        <path class="region-path" id="region-caribbean" data-name="加勒比海地区"
+                              d="M 280 260 L 350 240 L 370 290 L 300 300 Z"
+                              onclick="showRegionDetails('caribbean')"/>
+                        <text class="region-label" x="325" y="275">加勒比</text>
+                        <circle class="crisis-indicator" cx="325" cy="255" id="crisis-caribbean"/>
+                        
+                        <!-- 太平洋岛国 -->
+                        <path class="region-path" id="region-pacific" data-name="太平洋岛国"
+                              d="M 850 350 L 950 330 L 980 400 L 900 420 L 860 380 Z"
+                              onclick="showRegionDetails('pacific')"/>
+                        <text class="region-label" x="910" y="375">太平洋岛国</text>
+                        <circle class="crisis-indicator" cx="910" cy="355" id="crisis-pacific"/>
+                        
+                        <!-- 高加索 -->
+                        <path class="region-path" id="region-caucasus" data-name="高加索地区"
+                              d="M 580 120 L 640 110 L 650 160 L 600 150 Z"
+                              onclick="showRegionDetails('caucasus')"/>
+                        <text class="region-label" x="620" y="140">高加索</text>
+                        <circle class="crisis-indicator" cx="620" cy="120" id="crisis-caucasus"/>
+                        
+                        <!-- 安第斯 -->
+                        <path class="region-path" id="region-andes" data-name="安第斯山区"
+                              d="M 220 350 L 280 340 L 290 450 L 230 460 L 200 400 Z"
+                              onclick="showRegionDetails('andes')"/>
+                        <text class="region-label" x="245" y="400">安第斯</text>
+                        <circle class="crisis-indicator" cx="245" cy="380" id="crisis-andes"/>
+                    </svg>
+                </div>
+
+                <div class="region-details" id="regionCards">
+                    <!-- 动态生成区域卡片 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知容器 -->
+    <div class="notification-container" id="notifications"></div>
+
+    <!-- 模态框 -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">标题</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 事件弹窗 -->
+    <div class="event-overlay" id="eventOverlay">
+        <div class="event-card" id="eventCard">
+            <div class="event-icon" id="eventIcon">⚠️</div>
+            <h2 class="event-title" id="eventTitle">突发事件</h2>
+            <p class="event-desc" id="eventDesc">事件描述</p>
+            <div class="event-choices" id="eventChoices">
+                <!-- 动态生成按钮 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 时间轴 -->
+    <div class="timeline">
+        <span style="color: #a8d8ea;">年份</span>
+        <span class="year-display" id="yearDisplay">1970</span>
+        <span class="season-indicator" id="seasonIcon">🌸</span>
+        <span style="color: #a8d8ea; font-size: 0.9em;" id="seasonName">春季</span>
+    </div>
+
+    <script>
+        // 游戏状态
+        const gameState = {
+            year: 1970,
+            season: 0, // 0春 1夏 2秋 3冬
+            researchPoints: 100,
+            varieties: [],
+            savedLives: 0,
+            solvedRegions: [],
+            selectedGenes: [null, null],
+            fieldPlots: Array(12).fill(null),
+            unlockedTechs: ['hybrid_basic'],
+            activeTechs: [],
+            climate: {
+                temperature: 25,
+                rainfall: 60,
+                event: null
+            },
+            missions: [
+                { id: 1, desc: "培育第一个杂交品种并种植到试验田", completed: false, progress: 0 },
+                { id: 2, desc: "解决第一个地区的粮食危机", completed: false, progress: 0 },
+                { id: 3, desc: "累计拯救1亿人口", completed: false, progress: 0 },
+                { id: 4, desc: "解锁基因编辑技术", completed: false, progress: 0 },
+                { id: 5, desc: "解决全球50%地区的危机", completed: false, progress: 0 }
+            ],
+            currentMission: 0,
+            
+            regions: {
+                eastasia: {
+                    name: '东亚季风区',
+                    crisis: 40,
+                    population: 15,
+                    requirements: { yield: 70, disease: 60, cold: 50 },
+                    climate: 'temperate',
+                    desc: '人口密集，需要高产抗病品种'
+                },
+                southasia: {
+                    name: '南亚次大陆',
+                    crisis: 85,
+                    population: 18,
+                    requirements: { yield: 80, drought: 70, heat: 75 },
+                    climate: 'tropical',
+                    desc: '季风不稳定，旱涝频发'
+                },
+                southeast: {
+                    name: '东南亚群岛',
+                    crisis: 60,
+                    population: 6,
+                    requirements: { yield: 65, flood: 80, pest: 70 },
+                    climate: 'tropical',
+                    desc: '台风频繁，需要耐涝抗虫品种'
+                },
+                centralasia: {
+                    name: '中亚干旱区',
+                    crisis: 75,
+                    population: 3,
+                    requirements: { yield: 50, drought: 95, cold: 60 },
+                    climate: 'arid',
+                    desc: '极度干旱，灌溉困难'
+                },
+                middleeast: {
+                    name: '中东沙漠区',
+                    crisis: 90,
+                    population: 4,
+                    requirements: { yield: 45, drought: 100, salt: 80 },
+                    climate: 'desert',
+                    desc: '沙漠气候，土壤盐碱化严重'
+                },
+                sahara: {
+                    name: '撒哈拉以南',
+                    crisis: 95,
+                    population: 12,
+                    requirements: { yield: 55, drought: 90, disease: 80 },
+                    climate: 'arid',
+                    desc: '非洲粮食危机核心区'
+                },
+                eastafrica: {
+                    name: '东非高原',
+                    crisis: 80,
+                    population: 5,
+                    requirements: { yield: 60, drought: 85, pest: 75 },
+                    climate: 'highland',
+                    desc: '蝗虫灾害频发'
+                },
+                latam: {
+                    name: '拉丁美洲',
+                    crisis: 50,
+                    population: 6,
+                    requirements: { yield: 70, disease: 65 },
+                    climate: 'tropical',
+                    desc: '生物多样性高，病害复杂'
+                },
+                caribbean: {
+                    name: '加勒比海地区',
+                    crisis: 65,
+                    population: 0.5,
+                    requirements: { yield: 60, storm: 80, salt: 60 },
+                    climate: 'tropical',
+                    desc: '飓风威胁，土壤盐渍化'
+                },
+                pacific: {
+                    name: '太平洋岛国',
+                    crisis: 70,
+                    population: 0.3,
+                    requirements: { yield: 50, salt: 90, storm: 85 },
+                    climate: 'oceanic',
+                    desc: '海平面上升，土地盐碱化'
+                },
+                caucasus: {
+                    name: '高加索地区',
+                    crisis: 55,
+                    population: 0.8,
+                    requirements: { yield: 65, cold: 80 },
+                    climate: 'continental',
+                    desc: '冬季严寒，生长期短'
+                },
+                andes: {
+                    name: '安第斯山区',
+                    crisis: 60,
+                    population: 0.5,
+                    requirements: { yield: 55, cold: 90, altitude: 85 },
+                    climate: 'alpine',
+                    desc: '高海拔，低温缺氧'
+                }
+            },
+
+            genePool: [
+                { id: 1, name: '野生稻O.nivara', traits: { yield: 25, drought: 85, disease: 30, pest: 40, quality: 20 }, rarity: 'common', origin: '印度' },
+                { id: 2, name: '籼稻9311', traits: { yield: 65, drought: 50, disease: 55, pest: 60, quality: 70, heat: 75 }, rarity: 'common', origin: '中国' },
+                { id: 3, name: '粳稻日本晴', traits: { yield: 60, drought: 45, disease: 65, pest: 55, quality: 85, cold: 50 }, rarity: 'common', origin: '日本' },
+                { id: 4, name: '非洲长穗野生稻', traits: { yield: 35, drought: 95, disease: 25, pest: 35, quality: 25 }, rarity: 'rare', origin: '非洲' },
+                { id: 5, name: '深水稻FR13A', traits: { yield: 40, drought: 20, disease: 50, pest: 45, quality: 40, flood: 95 }, rarity: 'rare', origin: '孟加拉' },
+                { id: 6, name: '香稻茉莉香', traits: { yield: 45, drought: 40, disease: 45, pest: 50, quality: 95, aroma: 90 }, rarity: 'epic', origin: '泰国' },
+                { id: 7, name: '盐碱稻Pokkali', traits: { yield: 50, drought: 70, disease: 55, pest: 50, quality: 50, salt: 90 }, rarity: 'rare', origin: '印度' },
+                { id: 8, name: '竹稻杂交种', traits: { yield: 75, drought: 60, disease: 80, pest: 85, quality: 60, height: 150 }, rarity: 'epic', origin: '中国' },
+                { id: 9, name: '陆稻 upland', traits: { yield: 55, drought: 80, disease: 40, pest: 45, quality: 55, aerobic: 85 }, rarity: 'rare', origin: '巴西' },
+                { id: 10, name: '寒地稻空育131', traits: { yield: 50, drought: 50, disease: 60, pest: 50, quality: 75, cold: 90 }, rarity: 'epic', origin: '中国黑龙江' },
+                { id: 11, name: '太空诱变株', traits: { yield: 85, drought: 70, disease: 90, pest: 80, quality: 75, mutation: 95 }, rarity: 'legendary', origin: '中国空间站', locked: true },
+                { id: 12, name: '海水稻', traits: { yield: 45, drought: 60, disease: 65, pest: 60, quality: 50, salt: 100 }, rarity: 'legendary', origin: '中国青岛', locked: true },
+                { id: 13, name: '黄金大米', traits: { yield: 70, drought: 55, disease: 60, pest: 65, quality: 80, nutrition: 100 }, rarity: 'legendary', origin: '瑞士实验室', locked: true },
+                { id: 14, name: 'C4水稻原型', traits: { yield: 95, drought: 80, disease: 85, pest: 80, quality: 70, photosynthesis: 100 }, rarity: 'mythic', origin: '国际水稻研究所', locked: true }
+            ],
+
+            techTree: [
+                { id: 'hybrid_basic', name: '三系配套', desc: '不育系、保持系、恢复系杂交技术', cost: 0, unlocked: true, effect: '解锁基础杂交' },
+                { id: 'gene_editing', name: 'CRISPR基因编辑', desc: '精确修改特定基因位点', cost: 800, unlocked: false, effect: '可定向提升单一性状+20' },
+                { id: 'molecular_markers', name: '分子标记辅助', desc: 'MAS技术加速育种进程', cost: 1500, unlocked: false, effect: '杂交成功率+30%' },
+                { id: 'space_breeding', name: '航天育种', desc: '利用太空环境诱导突变', cost: 3000, unlocked: false, effect: '解锁太空诱变株' },
+                { id: 'super_rice', name: '超级稻计划', desc: '理想株型与杂种优势结合', cost: 5000, unlocked: false, effect: '产量潜力突破90' },
+                { id: 'green_super_rice', name: '绿色超级稻', desc: '少投入、多产出、环境友好', cost: 8000, unlocked: false, effect: '抗病虫性+50%' },
+                { id: 'c4_rice', name: 'C4水稻工程', desc: '改造光合途径大幅提高产量', cost: 15000, unlocked: false, effect: '解锁C4水稻原型' }
+            ]
+        };
+
+        // 初始化
+        function init() {
+            renderGenePool();
+            renderField();
+            renderTechTree();
+            renderRegionCards();
+            updateMap();
+            updateStats();
+            updateClimate();
+            startGameLoop();
+            showNotification('欢迎来到稻梦工程师！培育杂交水稻，拯救世界饥饿危机。', 'success');
+        }
+
+        // 渲染基因库
+        function renderGenePool() {
+            const pool = document.getElementById('genePool');
+            const unlockedGenes = gameState.genePool.filter(g => !g.locked);
+            
+            pool.innerHTML = unlockedGenes.map(gene => {
+                const isSelected = gameState.selectedGenes.includes(gene.id);
+                return `
+                    <div class="gene-item ${isSelected ? 'selected' : ''}" onclick="selectGene(${gene.id})" data-id="${gene.id}">
+                        <div class="gene-header">
+                            <div class="gene-name">${gene.name}</div>
+                            <span class="gene-rarity rarity-${gene.rarity}">${getRarityText(gene.rarity)}</span>
+                        </div>
+                        <div class="gene-traits">
+                            ${Object.entries(gene.traits).slice(0, 4).map(([k, v]) => 
+                                `<span class="trait-tag">${getTraitName(k)}:${v}</span>`
+                            ).join('')}
+                        </div>
+                        <div style="margin-top: 8px; font-size: 0.8em; color: #888;">
+                            📍 ${gene.origin}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getRarityText(r) {
+            const map = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说', mythic: '神话' };
+            return map[r] || r;
+        }
+
+        function getTraitName(t) {
+            const map = {
+                yield: '产量', drought: '抗旱', disease: '抗病', pest: '抗虫',
+                quality: '品质', flood: '耐涝', salt: '耐盐', cold: '耐寒',
+                heat: '耐热', aroma: '香气', height: '株高', nutrition: '营养',
+                mutation: '突变', photosynthesis: '光合', aerobic: '旱作'
+            };
+            return map[t] || t;
+        }
+
+        // 选择基因
+        function selectGene(id) {
+            const idx = gameState.selectedGenes.indexOf(id);
+            if (idx > -1) {
+                gameState.selectedGenes[idx] = null;
+            } else if (!gameState.selectedGenes[0]) {
+                gameState.selectedGenes[0] = id;
+            } else if (!gameState.selectedGenes[1]) {
+                gameState.selectedGenes[1] = id;
+            } else {
+                showNotification('已选择两个亲本，请先取消一个', 'warning');
+                return;
+            }
+            updateSlots();
+            renderGenePool();
+        }
+
+        function updateSlots() {
+            [1, 2].forEach((num, idx) => {
+                const slot = document.getElementById(`slot${num}`);
+                const geneId = gameState.selectedGenes[idx];
+                
+                if (geneId) {
+                    const gene = gameState.genePool.find(g => g.id === geneId);
+                    slot.classList.add('filled');
+                    slot.innerHTML = `
+                        <div class="slot-number">${num}</div>
+                        <div class="slot-content">
+                            <div class="slot-icon">🌾</div>
+                            <div class="slot-name">${gene.name}</div>
+                            <div class="slot-traits">
+                                产量:${gene.traits.yield} | 抗旱:${gene.traits.drought}<br>
+                                品质:${gene.traits.quality}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    slot.classList.remove('filled');
+                    slot.innerHTML = `
+                        <div class="slot-number">${num}</div>
+                        <div class="slot-content">
+                            <div class="slot-icon">🌱</div>
+                            <div class="slot-name">选择亲本 ${String.fromCharCode(64 + num)}</div>
+                            <div class="slot-traits">点击选择种质</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            document.getElementById('hybridBtn').disabled = 
+                !(gameState.selectedGenes[0] && gameState.selectedGenes[1]);
+        }
+
+        // 执行杂交
+        function performHybridization() {
+            const g1 = gameState.genePool.find(g => g.id === gameState.selectedGenes[0]);
+            const g2 = gameState.genePool.find(g => g.id === gameState.selectedGenes[1]);
+            
+            // 计算后代性状
+            const traits = {};
+            const allTraits = new Set([...Object.keys(g1.traits), ...Object.keys(g2.traits)]);
+            
+            allTraits.forEach(t => {
+                const v1 = g1.traits[t] || 0;
+                const v2 = g2.traits[t] || 0;
+                const base = (v1 + v2) / 2;
+                
+                // 杂种优势
+                const heterosis = (v1 > 70 && v2 > 70) ? 15 : (v1 > 60 || v2 > 60) ? 8 : 0;
+                // 技术加成
+                const techBonus = gameState.unlockedTechs.includes('super_rice') ? 10 : 0;
+                // 随机变异
+                const variance = (Math.random() - 0.5) * 10;
+                
+                let final = Math.round(base + heterosis + techBonus + variance);
+                final = Math.max(10, Math.min(100, final));
+                traits[t] = final;
+            });
+            
+            // 生成品种
+            const variety = {
+                id: Date.now(),
+                name: generateVarietyName(g1, g2),
+                parents: [g1.name, g2.name],
+                traits: traits,
+                created: gameState.year,
+                generation: Math.max(g1.generation || 1, g2.generation || 1) + 1,
+                plantings: 0
+            };
+            
+            gameState.varieties.push(variety);
+            gameState.researchPoints += Math.floor(traits.yield / 3);
+            gameState.selectedGenes = [null, null];
+            
+            updateSlots();
+            renderGenePool();
+            updateStats();
+            checkMissions();
+            
+            showVarietyModal(variety);
+            showNotification(`🎉 成功培育新品种：${variety.name}！产量潜力${traits.yield}`, 'success');
+            
+            // 检查解锁
+            if (gameState.varieties.length === 1) {
+                showNotification('🏆 成就：初出茅庐 - 培育首个品种', 'success');
+            }
+            if (traits.yield > 85) {
+                showNotification('🏆 成就：高产先锋 - 产量突破85', 'success');
+            }
+        }
+
+        function generateVarietyName(g1, g2) {
+            const prefixes = ['超级', '黄金', '翡翠', '珍珠', '巨龙', '凤凰', '星辰', '大地', '希望', '未来'];
+            const suffixes = ['1号', '优系', '杂交种', '改良版', '新组合', '实验株', '示范种'];
+            
+            // 特殊组合命名
+            if (g1.name.includes('野生') && g2.name.includes('9311')) return '野败恢复系';
+            if (g1.name.includes('深水稻') && g2.name.includes('籼稻')) return '水旱两用稻';
+            if (g1.name.includes('盐碱') && g2.name.includes('海水')) return '盐碱克星';
+            
+            const pre = prefixes[Math.floor(Math.random() * prefixes.length)];
+            const suf = suffixes[Math.floor(Math.random() * suffixes.length)];
+            const code = (g1.name.charAt(0) + g2.name.charAt(g2.name.length-1)).toUpperCase();
+            return `${pre}${code}${suf}`;
+        }
+
+        // 渲染试验田
+        function renderField() {
+            const grid = document.getElementById('fieldGrid');
+            grid.innerHTML = gameState.fieldPlots.map((plot, idx) => {
+                if (!plot) {
+                    return `<div class="field-plot" onclick="plantVariety(${idx})">
+                        <div class="plot-rice">🟫</div>
+                        <div class="plot-info">空闲</div>
+                    </div>`;
+                }
+                
+                const variety = plot.variety;
+                const isMature = plot.mature;
+                const growth = plot.growth || 0;
+                const icon = isMature ? '🌾' : growth > 50 ? '🌿' : '🌱';
+                
+                return `<div class="field-plot ${isMature ? 'mature' : 'planted'}" onclick="${isMature ? `harvest(${idx})` : ''}">
+                    <div class="plot-rice">${icon}</div>
+                    <div class="plot-info">
+                        ${variety.name.substring(0, 4)}<br>
+                        ${isMature ? '可收获' : `${growth}%`}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function plantVariety(idx) {
+            if (gameState.varieties.length === 0) {
+                showNotification('请先培育品种！', 'warning');
+                return;
+            }
+            
+            // 显示选择模态框
+            const modal = document.getElementById('modal');
+            document.getElementById('modalTitle').textContent = '选择种植品种';
+            document.getElementById('modalBody').innerHTML = `
+                <div style="display: grid; gap: 10px;">
+                    ${gameState.varieties.map(v => `
+                        <div class="gene-item" onclick="confirmPlant(${idx}, ${v.id}); closeModal();" style="cursor: pointer;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: bold; color: #FFD700;">${v.name}</div>
+                                    <div style="font-size: 0.85em; color: #a8d8ea;">
+                                        产量:${v.traits.yield} | 已种植${v.plantings}次
+                                    </div>
+                                </div>
+                                <button style="padding: 8px 20px; background: #FFD700; color: #1e3c72; border: none; border-radius: 5px; font-weight: bold;">
+                                    种植
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+
+        function confirmPlant(idx, varietyId) {
+            const variety = gameState.varieties.find(v => v.id === varietyId);
+            gameState.fieldPlots[idx] = {
+                variety: variety,
+                planted: gameState.year,
+                growth: 0,
+                mature: false
+            };
+            variety.plantings++;
+            
+            // 生长模拟
+            const growthInterval = setInterval(() => {
+                const plot = gameState.fieldPlots[idx];
+                if (!plot) {
+                    clearInterval(growthInterval);
+                    return;
+                }
+                
+                plot.growth += 20;
+                if (plot.growth >= 100) {
+                    plot.mature = true;
+                    plot.growth = 100;
+                    clearInterval(growthInterval);
+                    showNotification(`${variety.name} 已成熟！`, 'success');
+                }
+                renderField();
+            }, 1000);
+            
+            renderField();
+            showNotification(`种植了 ${variety.name}`, 'info');
+            checkMissions();
+        }
+
+        function harvest(idx) {
+            const plot = gameState.fieldPlots[idx];
+            if (!plot.mature) return;
+            
+            const variety = plot.variety;
+            const yield = variety.traits.yield;
+            const bonus = gameState.unlockedTechs.includes('green_super_rice') ? 1.5 : 1;
+            const points = Math.floor(yield * bonus);
+            
+            gameState.researchPoints += points;
+            gameState.savedLives += (points / 1000);
+            
+            // 检查区域解决
+            checkRegionalSolutions(variety);
+            
+            gameState.fieldPlots[idx] = null;
+            renderField();
+            updateStats();
+            
+            showNotification(`收获 ${variety.name}！获得 ${points} RP`, 'success');
+            createParticles(event.clientX, event.clientY);
+        }
+
+        function checkRegionalSolutions(variety) {
+            Object.entries(gameState.regions).forEach(([key, region]) => {
+                if (region.solved) return;
+                
+                let meets = true;
+                for (let [trait, req] of Object.entries(region.requirements)) {
+                    if ((variety.traits[trait] || 0) < req) {
+                        meets = false;
+                        break;
+                    }
+                }
+                
+                if (meets) {
+                    region.solved = true;
+                    region.crisis = 15;
+                    gameState.solvedRegions.push(key);
+                    gameState.savedLives += region.population;
+                    
+                    showNotification(`🌍 重大突破！解决 ${region.name} 粮食危机，拯救${region.population}亿人口！`, 'success');
+                    updateMap();
+                    renderRegionCards();
+                    updateStats();
+                    checkMissions();
+                    
+                    // 解锁新基因
+                    unlockRegionalGenes(key);
+                }
+            });
+        }
+
+        function unlockRegionalGenes(regionKey) {
+            const unlocks = {
+                'sahara': { id: 15, name: '非洲耐旱超级稻', traits: { yield: 70, drought: 98, heat: 90 } },
+                'middleeast': { id: 16, name: '沙漠稻', traits: { yield: 60, drought: 100, salt: 95 } },
+                'pacific': { id: 17, name: '海水稻升级版', traits: { yield: 65, salt: 100, storm: 85 } }
+            };
+            
+            if (unlocks[regionKey] && !gameState.genePool.find(g => g.id === unlocks[regionKey].id)) {
+                gameState.genePool.push({...unlocks[regionKey], rarity: 'legendary', origin: regionKey});
+                showNotification(`🔓 解锁新种质：${unlocks[regionKey].name}！`, 'success');
+                renderGenePool();
+            }
+        }
+
+        // 渲染科技树
+        function renderTechTree() {
+            const tree = document.getElementById('techTree');
+            tree.innerHTML = gameState.techTree.map(tech => {
+                const canUnlock = !tech.unlocked && gameState.researchPoints >= tech.cost;
+                const locked = !tech.unlocked && !canUnlock;
+                
+                return `
+                    <div class="tech-item ${tech.unlocked ? 'unlocked' : ''} ${locked ? 'locked' : ''}" 
+                         onclick="${canUnlock ? `unlockTech('${tech.id}')` : ''}">
+                        <div class="tech-info">
+                            <h4>${tech.unlocked ? '✅ ' : ''}${tech.name}</h4>
+                            <div class="tech-desc">${tech.desc}</div>
+                            <div style="font-size: 0.8em; color: #FFD700; margin-top: 5px;">
+                                ${tech.effect}
+                            </div>
+                        </div>
+                        <div class="tech-cost">
+                            ${tech.unlocked ? '<span style="color: #00ff88;">已解锁</span>' : 
+                              `<div class="cost-amount">${tech.cost} RP</div>`}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function unlockTech(techId) {
+            const tech = gameState.techTree.find(t => t.id === techId);
+            if (!tech || tech.unlocked || gameState.researchPoints < tech.cost) return;
+            
+            gameState.researchPoints -= tech.cost;
+            tech.unlocked = true;
+            gameState.unlockedTechs.push(techId);
+            
+            // 特殊效果
+            if (techId === 'space_breeding') {
+                gameState.genePool.find(g => g.id === 11).locked = false;
+                showNotification('🚀 解锁太空诱变株！', 'success');
+            }
+            if (techId === 'super_rice') {
+                gameState.genePool.find(g => g.id === 12).locked = false;
+                showNotification('🌾 解锁海水稻！', 'success');
+            }
+            if (techId === 'green_super_rice') {
+                gameState.genePool.find(g => g.id === 13).locked = false;
+                showNotification('🥇 解锁黄金大米！', 'success');
+            }
+            if (techId === 'c4_rice') {
+                gameState.genePool.find(g => g.id === 14).locked = false;
+                showNotification('🧬 解锁C4水稻原型！', 'success');
+            }
+            
+            renderTechTree();
+            renderGenePool();
+            updateStats();
+            showNotification(`解锁成功：${tech.name}！`, 'success');
+            checkMissions();
+        }
+
+        // 渲染区域卡片
+        function renderRegionCards() {
+            const container = document.getElementById('regionCards');
+            container.innerHTML = Object.entries(gameState.regions).map(([key, region]) => `
+                <div class="region-card ${region.solved ? 'solved' : ''}" id="card-${key}">
+                    <div class="region-header">
+                        <div class="region-name">${region.solved ? '✅' : '⚠️'} ${region.name}</div>
+                        <span class="crisis-badge crisis-${region.crisis > 80 ? 'extreme' : region.crisis > 60 ? 'high' : region.crisis > 40 ? 'medium' : 'low'}">
+                            ${region.crisis}% 危机
+                        </span>
+                    </div>
+                    <div style="font-size: 0.85em; color: #a8d8ea; margin-bottom: 10px;">
+                        ${region.desc}
+                    </div>
+                    <div class="region-stats">
+                        <div class="stat-row">
+                            <span>👥 人口</span>
+                            <span style="color: #FFD700;">${region.population}亿</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>🌡️ 气候</span>
+                            <span>${region.climate}</span>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.8em; margin: 10px 0;">
+                        <strong>需求：</strong>${Object.entries(region.requirements).map(([k,v]) => `${getTraitName(k)}>${v}`).join(', ')}
+                    </div>
+                    ${!region.solved ? `
+                        <button class="deploy-btn" onclick="showRegionDetails('${key}')">
+                            查看详情并部署
+                        </button>
+                    ` : '<div style="text-align: center; color: #00ff88; padding: 10px;">已解决粮食危机</div>'}
+                </div>
+            `).join('');
+        }
+
+        function showRegionDetails(key) {
+            const region = gameState.regions[key];
+            const modal = document.getElementById('modal');
+            document.getElementById('modalTitle').textContent = `🌍 ${region.name}`;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="variety-card">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                            <div style="color: #a8d8ea; font-size: 0.9em;">粮食危机指数</div>
+                            <div style="font-size: 2em; color: #e74c3c; font-weight: bold;">${region.crisis}%</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                            <div style="color: #a8d8ea; font-size: 0.9em;">受影响人口</div>
+                            <div style="font-size: 2em; color: #FFD700; font-weight: bold;">${region.population}亿</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="color: #FFD700; margin-bottom: 15px;">🎯 品种需求分析</h4>
+                    <div class="trait-grid" style="margin-bottom: 20px;">
+                        ${Object.entries(region.requirements).map(([trait, value]) => `
+                            <div class="trait-item">
+                                <div class="trait-header">
+                                    <span>${getTraitName(trait)}</span>
+                                    <span style="color: #FFD700;">>${value}</span>
+                                </div>
+                                <div class="trait-bar-bg">
+                                    <div class="trait-bar-fill" style="width: ${value}%; background: linear-gradient(90deg, #e74c3c, #f39c12);"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <h4 style="color: #FFD700; margin-bottom: 15px;">🌾 可部署品种</h4>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        ${gameState.varieties.filter(v => {
+                            return Object.entries(region.requirements).every(([t, req]) => (v.traits[t] || 0) >= req);
+                        }).map(v => `
+                            <div style="background: rgba(0,255,136,0.1); border: 1px solid #00ff88; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: bold;">${v.name}</div>
+                                    <div style="font-size: 0.8em; color: #a8d8ea;">产量:${v.traits.yield} 抗旱:${v.traits.drought}</div>
+                                </div>
+                                <button onclick="deployToRegion('${key}', ${v.id})" style="padding: 8px 20px; background: #00ff88; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+                                    部署
+                                </button>
+                            </div>
+                        `).join('') || '<div style="text-align: center; color: #e74c3c; padding: 20px;">没有满足需求的品种，请继续育种！</div>'}
+                    </div>
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+
+        function deployToRegion(regionKey, varietyId) {
+            const variety = gameState.varieties.find(v => v.id === varietyId);
+            const region = gameState.regions[regionKey];
+            
+            region.solved = true;
+            region.crisis = 10;
+            gameState.solvedRegions.push(regionKey);
+            gameState.savedLives += region.population;
+            
+            closeModal();
+            updateMap();
+            renderRegionCards();
+            updateStats();
+            checkMissions();
+            
+            showNotification(`🎉 成功部署 ${variety.name} 到 ${region.name}！拯救${region.population}亿人口！`, 'success');
+            
+            // 检查胜利条件
+            if (gameState.solvedRegions.length === Object.keys(gameState.regions).length) {
+                triggerVictory();
+            }
+        }
+
+        function updateMap() {
+            Object.entries(gameState.regions).forEach(([key, region]) => {
+                const path = document.getElementById(`region-${key}`);
+                const indicator = document.getElementById(`crisis-${key}`);
+                
+                if (region.solved) {
+                    path.classList.add('solved');
+                    indicator.style.fill = '#00ff88';
+                    indicator.style.animation = 'none';
+                } else {
+                    path.classList.remove('solved');
+                    indicator.style.fill = region.crisis > 80 ? '#c0392b' : region.crisis > 60 ? '#e74c3c' : '#f39c12';
+                }
+            });
+        }
+
+        // 更新气候
+        function updateClimate() {
+            const climates = [
+                { temp: 25, rain: 60, event: null, name: '正常' },
+                { temp: 35, rain: 30, event: 'drought', name: '干旱' },
+                { temp: 20, rain: 90, event: 'flood', name: '洪涝' },
+                { temp: 15, rain: 40, event: 'cold', name: '寒潮' },
+                { temp: 30, rain: 70, event: 'pest', name: '虫害爆发' }
+            ];
+            
+            const climate = climates[Math.floor(Math.random() * climates.length)];
+            gameState.climate = climate;
+            
+            document.getElementById('tempBar').style.width = (climate.temp / 50 * 100) + '%';
+            document.getElementById('tempValue').textContent = climate.temp + '°C';
+            document.getElementById('rainBar').style.width = climate.rain + '%';
+            document.getElementById('rainValue').textContent = climate.rain + '%';
+            document.getElementById('climateEvent').textContent = 
+                climate.event ? `⚠️ 警告：${climate.name}天气，${getClimateEffect(climate.event)}` : '✅ 气候正常，适宜育种';
+        }
+
+        function getClimateEffect(event) {
+            const effects = {
+                drought: '干旱导致产量下降20%',
+                flood: '洪涝可能导致试验田损失',
+                cold: '低温延缓生长周期',
+                pest: '虫害爆发，需高抗虫品种'
+            };
+            return effects[event] || '';
+        }
+
+        // 游戏循环
+        function startGameLoop() {
+            setInterval(() => {
+                // 季节推进
+                gameState.season = (gameState.season + 1) % 4;
+                const seasons = ['🌸 春季', '☀️ 夏季', '🍂 秋季', '❄️ 冬季'];
+                const seasonIcons = ['🌸', '☀️', '🍂', '❄️'];
+                document.getElementById('seasonIcon').textContent = seasonIcons[gameState.season];
+                document.getElementById('seasonName').textContent = seasons[gameState.season].split(' ')[1];
+                
+                // 年份推进
+                if (gameState.season === 0) {
+                    gameState.year++;
+                    document.getElementById('yearDisplay').textContent = gameState.year;
+                    updateClimate();
+                    
+                    // 随机事件
+                    if (Math.random() > 0.7) triggerRandomEvent();
+                }
+                
+                // 基础研究点
+                if (gameState.season % 2 === 0) {
+                    gameState.researchPoints += 5 + gameState.solvedRegions.length * 2;
+                    updateStats();
+                }
+                
+                // 区域危机恶化
+                if (Math.random() > 0.8 && gameState.season === 2) {
+                    Object.values(gameState.regions).forEach(r => {
+                        if (!r.solved && r.crisis < 100) r.crisis += 2;
+                    });
+                    renderRegionCards();
+                    updateMap();
+                }
+            }, 5000); // 5秒一个季节，20秒一年
+        }
+
+        function triggerRandomEvent() {
+            const events = [
+                {
+                    icon: '🌊',
+                    title: '东南亚海啸',
+                    desc: '强烈海啸袭击东南亚，试验田受损，但发现耐涝基因突变！',
+                    choices: [
+                        { text: '收集突变基因 (+耐涝性状)', action: () => {
+                            gameState.genePool.push({
+                                id: Date.now(),
+                                name: '海啸突变体',
+                                traits: { yield: 50, flood: 95, salt: 80 },
+                                rarity: 'epic',
+                                origin: '泰国'
+                            });
+                            renderGenePool();
+                            showNotification('获得海啸突变体！', 'success');
+                        }},
+                        { text: '专注救灾 (-100 RP)', action: () => {
+                            gameState.researchPoints = Math.max(0, gameState.researchPoints - 100);
+                            updateStats();
+                        }}
+                    ]
+                },
+                {
+                    icon: '🏆',
+                    title: '诺贝尔和平奖提名',
+                    desc: '你的杂交水稻工作获得国际认可，研究资金大幅增加！',
+                    choices: [
+                        { text: '接受荣誉 (+500 RP)', action: () => {
+                            gameState.researchPoints += 500;
+                            updateStats();
+                        }}
+                    ]
+                },
+                {
+                    icon: '🐛',
+                    title: '褐飞虱爆发',
+                    desc: '东亚地区爆发严重虫害，需要紧急培育抗虫品种！',
+                    choices: [
+                        { text: '紧急攻关 (+抗虫研究速度)', action: () => {
+                            showNotification('抗虫研究速度提升50%', 'success');
+                        }}
+                    ]
+                }
+            ];
+            
+            const event = events[Math.floor(Math.random() * events.length)];
+            showEventModal(event);
+        }
+
+        function showEventModal(event) {
+            const overlay = document.getElementById('eventOverlay');
+            document.getElementById('eventIcon').textContent = event.icon;
+            document.getElementById('eventTitle').textContent = event.title;
+            document.getElementById('eventDesc').textContent = event.desc;
+            document.getElementById('eventChoices').innerHTML = event.choices.map((c, i) => `
+                <button class="event-btn" onclick="handleEventChoice(${i})">${c.text}</button>
+            `).join('');
+            
+            overlay.dataset.event = JSON.stringify(event);
+            overlay.classList.add('active');
+        }
+
+        function handleEventChoice(idx) {
+            const overlay = document.getElementById('eventOverlay');
+            const event = JSON.parse(overlay.dataset.event);
+            event.choices[idx].action();
+            overlay.classList.remove('active');
+        }
+
+        function checkMissions() {
+            const mission = gameState.missions[gameState.currentMission];
+            if (!mission || mission.completed) return;
+            
+            let progress = 0;
+            switch(mission.id) {
+                case 1: progress = gameState.varieties.length > 0 && gameState.fieldPlots.some(p => p) ? 100 : 0; break;
+                case 2: progress = gameState.solvedRegions.length > 0 ? 100 : 0; break;
+                case 3: progress = Math.min(100, (gameState.savedLives / 1) * 100); break;
+                case 4: progress = gameState.unlockedTechs.includes('gene_editing') ? 100 : 0; break;
+                case 5: progress = Math.min(100, (gameState.solvedRegions.length / 6) * 100); break;
+            }
+            
+            mission.progress = progress;
+            document.getElementById('missionProgress').style.width = progress + '%';
+            
+            if (progress >= 100) {
+                mission.completed = true;
+                showNotification(`🏆 任务完成：${mission.desc}！`, 'success');
+                gameState.currentMission++;
+                if (gameState.currentMission < gameState.missions.length) {
+                    document.getElementById('currentMission').textContent = gameState.missions[gameState.currentMission].desc;
+                    document.getElementById('missionProgress').style.width = '0%';
+                } else {
+                    document.getElementById('currentMission').textContent = '所有任务完成！继续拯救世界！';
+                }
+            }
+        }
+
+        function triggerVictory() {
+            const modal = document.getElementById('modal');
+            document.getElementById('modalTitle').textContent = '🎉 胜利！';
+            document.getElementById('modalBody').innerHTML = `
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 4em; margin-bottom: 20px;">🏆</div>
+                    <h2 style="color: #FFD700; margin-bottom: 20px;">你已成为真正的世界工程师！</h2>
+                    <p style="font-size: 1.1em; line-height: 1.8; margin-bottom: 20px;">
+                        通过不懈努力，你成功利用杂交水稻技术解决了全球粮食危机。<br>
+                        累计培育品种：<strong>${gameState.varieties.length}</strong> 个<br>
+                        拯救全球人口：<strong>${gameState.savedLives.toFixed(1)}</strong> 亿<br>
+                        用时：<strong>${gameState.year - 1970}</strong> 年
+                    </p>
+                    <div style="background: rgba(0,255,136,0.1); padding: 20px; border-radius: 10px; border: 1px solid #00ff88;">
+                        <p style="color: #00ff88; font-style: italic;">
+                            "杂交水稻覆盖全球梦"在你手中成为现实！
+                        </p>
+                    </div>
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 15px 40px; background: #FFD700; color: #1e3c72; border: none; border-radius: 25px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
+                        再次挑战
+                    </button>
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+
+        // 辅助功能
+        function updateStats() {
+            document.getElementById('researchPoints').textContent = gameState.researchPoints;
+            document.getElementById('varietyCount').textContent = gameState.varieties.length;
+            document.getElementById('savedLives').textContent = gameState.savedLives.toFixed(1);
+            document.getElementById('solvedRegions').textContent = `${gameState.solvedRegions.length}/${Object.keys(gameState.regions).length}`;
+            document.getElementById('achievementScore').textContent = 
+                gameState.varieties.length * 100 + gameState.solvedRegions.length * 1000;
+        }
+
+        function showNotification(text, type = 'info') {
+            const container = document.getElementById('notifications');
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.textContent = text;
+            container.appendChild(notif);
+            
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                notif.style.transform = 'translateX(100%)';
+                setTimeout(() => notif.remove(), 300);
+            }, 4000);
+        }
+
+        function showVarietyModal(variety) {
+            const modal = document.getElementById('modal');
+            document.getElementById('modalTitle').textContent = `🌾 ${variety.name}`;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="variety-card">
+                    <div class="variety-header">
+                        <div>
+                            <div class="variety-name">${variety.name}</div>
+                            <div style="font-size: 0.9em; color: #a8d8ea; margin-top: 5px;">
+                                亲本：${variety.parents.join(' × ')} | ${variety.created}年 | F${variety.generation}
+                            </div>
+                        </div>
+                        <span class="variety-badge">产量 ${variety.traits.yield}</span>
+                    </div>
+                    
+                    <div class="trait-grid">
+                        ${Object.entries(variety.traits).map(([trait, value]) => `
+                            <div class="trait-item">
+                                <div class="trait-header">
+                                    <span>${getTraitName(trait)}</span>
+                                    <span style="color: #FFD700;">${value}</span>
+                                </div>
+                                <div class="trait-bar-bg">
+                                    <div class="trait-bar-fill" style="width: ${value}%; background: ${value > 80 ? '#00ff88' : value > 60 ? '#FFD700' : '#e74c3c'};"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button onclick="closeModal(); plantVariety(findEmptyPlot());" class="hybrid-btn" style="margin: 0;">
+                            立即种植到试验田
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+
+        function findEmptyPlot() {
+            return gameState.fieldPlots.findIndex(p => p === null);
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function createParticles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.style.cssText = `
+                    position: fixed;
+                    left: ${x}px;
+                    top: ${y}px;
+                    font-size: 1.5em;
+                    pointer-events: none;
+                    z-index: 9999;
+                    animation: float ${1 + Math.random()}s ease-out forwards;
+                `;
+                p.textContent = ['✨', '🌾', '💰', '⭐'][Math.floor(Math.random() * 4)];
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 2000);
+            }
+        }
+
+        // 启动
+        window.onload = init;
+    </script>
+</body>
+</html>
