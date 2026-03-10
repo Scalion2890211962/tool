@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杂交水稻工程师</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            background-color: #f5f8e8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .game-container {
+            width: 800px;
+            max-width: 100%;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        .game-header h1 {
+            color: #2E7D32;
+            margin-bottom: 5px;
+        }
+        .status-panel {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 8px;
+        }
+        .status-item {
+            text-align: center;
+        }
+        .status-item .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2E7D32;
+        }
+        .control-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background: #4CAF50;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2E7D32;
+        }
+        .event-panel {
+            min-height: 80px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #fff8e1;
+            border-radius: 8px;
+            border-left: 4px solid #FFC107;
+        }
+        .progress-panel {
+            margin: 20px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.5s;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        .modal-content h2 {
+            color: #2E7D32;
+            margin-bottom: 20px;
+        }
+        .modal-content .btn {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>杂交水稻工程师</h1>
+            <p>培育高产、抗逆的杂交水稻，解决粮食问题！</p>
+        </div>
+
+        <!-- 状态面板：显示核心数值 -->
+        <div class="status-panel">
+            <div class="status-item">
+                <div class="label">当前产量 (kg/亩)</div>
+                <div class="value" id="yield-value">500</div>
+            </div>
+            <div class="status-item">
+                <div class="label">抗逆性</div>
+                <div class="value" id="resistance-value">50</div>
+            </div>
+            <div class="status-item">
+                <div class="label">研发点数</div>
+                <div class="value" id="points-value">100</div>
+            </div>
+        </div>
+
+        <!-- 进度面板：通关目标 -->
+        <div class="progress-panel">
+            <div>通关目标：亩产 1000 kg</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- 操作面板：核心功能按钮 -->
+        <div class="control-panel">
+            <button class="btn" id="breed-btn">杂交育种</button>
+            <button class="btn" id="plant-btn">田间种植</button>
+            <button class="btn" id="optimize-btn">基因优化</button>
+        </div>
+
+        <!-- 事件面板：显示随机事件/操作结果 -->
+        <div class="event-panel" id="event-panel">
+            欢迎成为杂交水稻工程师！你的目标是将水稻亩产提升至1000kg，开始你的育种之旅吧！
+        </div>
+    </div>
+
+    <!-- 通关弹窗 -->
+    <div class="modal" id="success-modal">
+        <div class="modal-content">
+            <h2>🎉 恭喜通关！</h2>
+            <p>你成功培育出亩产1000kg的超级杂交水稻，成为了顶尖的水稻工程师！</p>
+            <p>袁隆平爷爷的禾下乘凉梦，因你的努力又近了一步。</p>
+            <button class="btn" id="restart-btn">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏核心数据
+        const gameData = {
+            yield: 500,          // 亩产(kg/亩)
+            resistance: 50,      // 抗逆性(0-100)
+            points: 100,         // 研发点数
+            targetYield: 1000    // 通关目标
+        };
+
+        // DOM 元素
+        const elements = {
+            yieldValue: document.getElementById('yield-value'),
+            resistanceValue: document.getElementById('resistance-value'),
+            pointsValue: document.getElementById('points-value'),
+            progressFill: document.getElementById('progress-fill'),
+            eventPanel: document.getElementById('event-panel'),
+            breedBtn: document.getElementById('breed-btn'),
+            plantBtn: document.getElementById('plant-btn'),
+            optimizeBtn: document.getElementById('optimize-btn'),
+            successModal: document.getElementById('success-modal'),
+            restartBtn: document.getElementById('restart-btn')
+        };
+
+        // 随机事件配置
+        const events = [
+            { type: 'good', text: '☀️ 天气晴朗，水稻光合作用充分，产量+50kg/亩！', yield: 50, resistance: 0 },
+            { type: 'good', text: '🔬 发现优质亲本，抗逆性+10！', yield: 0, resistance: 10 },
+            { type: 'bad', text: '🌧️ 连续降雨，水稻倒伏，产量-30kg/亩！', yield: -30, resistance: 0 },
+            { type: 'bad', text: '🐛 发生稻飞虱虫害，抗逆性不足，产量-40kg/亩！', yield: -40, resistance: 0 },
+            { type: 'neutral', text: '🌡️ 温度适宜，水稻正常生长，无明显变化。', yield: 0, resistance: 0 }
+        ];
+
+        // 更新界面显示
+        function updateUI() {
+            elements.yieldValue.textContent = gameData.yield;
+            elements.resistanceValue.textContent = gameData.resistance;
+            elements.pointsValue.textContent = gameData.points;
+            
+            // 更新进度条
+            const progress = (gameData.yield / gameData.targetYield) * 100;
+            elements.progressFill.style.width = `${Math.min(progress, 100)}%`;
+
+            // 检查是否通关
+            if (gameData.yield >= gameData.targetYield) {
+                elements.successModal.style.display = 'flex';
+            }
+        }
+
+        // 显示随机事件
+        function triggerRandomEvent() {
+            const randomEvent = events[Math.floor(Math.random() * events.length)];
+            gameData.yield = Math.max(0, gameData.yield + randomEvent.yield);
+            gameData.resistance = Math.max(0, Math.min(100, gameData.resistance + randomEvent.resistance));
+            
+            // 事件面板样式区分
+            if (randomEvent.type === 'good') {
+                elements.eventPanel.style.borderLeftColor = '#4CAF50';
+            } else if (randomEvent.type === 'bad') {
+                elements.eventPanel.style.borderLeftColor = '#F44336';
+            } else {
+                elements.eventPanel.style.borderLeftColor = '#FFC107';
+            }
+            elements.eventPanel.textContent = randomEvent.text;
+        }
+
+        // 杂交育种：消耗点数，提升产量/抗逆性
+        function breedRice() {
+            if (gameData.points < 30) {
+                elements.eventPanel.textContent = '⚠️ 研发点数不足！至少需要30点才能进行杂交育种。';
+                elements.eventPanel.style.borderLeftColor = '#FF9800';
+                return;
+            }
+
+            gameData.points -= 30;
+            const yieldIncrease = Math.floor(Math.random() * 40) + 10; // 10-50
+            const resistanceIncrease = Math.floor(Math.random() * 15) + 5; //5-20
+            gameData.yield += yieldIncrease;
+            gameData.resistance = Math.min(100, gameData.resistance + resistanceIncrease);
+            
+            elements.eventPanel.textContent = `🧬 杂交育种成功！产量+${yieldIncrease}kg/亩，抗逆性+${resistanceIncrease}！`;
+            elements.eventPanel.style.borderLeftColor = '#4CAF50';
+            updateUI();
+        }
+
+        // 田间种植：触发随机事件，消耗少量点数
+        function plantRice() {
+            if (gameData.points < 10) {
+                elements.eventPanel.textContent = '⚠️ 研发点数不足！至少需要10点才能进行田间种植。';
+                elements.eventPanel.style.borderLeftColor = '#FF9800';
+                return;
+            }
+
+            gameData.points -= 10;
+            triggerRandomEvent();
+            updateUI();
+        }
+
+        // 基因优化：消耗较多点数，大幅提升抗逆性
+        function optimizeRice() {
+            if (gameData.points < 50) {
+                elements.eventPanel.textContent = '⚠️ 研发点数不足！至少需要50点才能进行基因优化。';
+                elements.eventPanel.style.borderLeftColor = '#FF9800';
+                return;
+            }
+
+            gameData.points -= 50;
+            const resistanceIncrease = Math.floor(Math.random() * 20) + 10; //10-30
+            gameData.resistance = Math.min(100, gameData.resistance + resistanceIncrease);
+            
+            // 抗逆性提升后，产量有小幅加成
+            const yieldBonus = Math.floor(resistanceIncrease / 2);
+            gameData.yield += yieldBonus;
+
+            elements.eventPanel.textContent = `🔧 基因优化成功！抗逆性+${resistanceIncrease}，产量额外+${yieldBonus}kg/亩！`;
+            elements.eventPanel.style.borderLeftColor = '#4CAF50';
+            updateUI();
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            gameData.yield = 500;
+            gameData.resistance = 50;
+            gameData.points = 100;
+            elements.successModal.style.display = 'none';
+            elements.eventPanel.textContent = '游戏重新开始！继续你的杂交水稻育种之旅吧！';
+            elements.eventPanel.style.borderLeftColor = '#FFC107';
+            updateUI();
+        }
+
+        // 绑定事件监听
+        function bindEvents() {
+            elements.breedBtn.addEventListener('click', breedRice);
+            elements.plantBtn.addEventListener('click', plantRice);
+            elements.optimizeBtn.addEventListener('click', optimizeRice);
+            elements.restartBtn.addEventListener('click', restartGame);
+        }
+
+        // 游戏初始化
+        function initGame() {
+            bindEvents();
+            updateUI();
+        }
+
+        // 启动游戏
+        initGame();
+    </script>
+</body>
+</html>
