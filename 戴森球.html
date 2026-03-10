@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>戴森球模拟器 - Dyson Sphere Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #0a0e27 0%, #000000 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(16, 24, 48, 0.9);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 280px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        .ui-panel h2 {
+            color: #64c8ff;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(100, 200, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+
+        .stat-label {
+            color: #8899aa;
+        }
+
+        .stat-value {
+            color: #64ffaa;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border: 1px solid rgba(100, 200, 255, 0.5);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #2a5298 0%, #3d6cb9 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(100, 200, 255, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #64c8ff, #64ffaa);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(16, 24, 48, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 200, 255, 0.2);
+            font-size: 0.8em;
+            color: #8899aa;
+            max-width: 300px;
+        }
+
+        .star-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255, 200, 100, 0.8) 0%, rgba(255, 150, 50, 0.4) 40%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+        }
+
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(16, 24, 48, 0.95);
+            border: 2px solid #64ffaa;
+            padding: 30px 50px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 0 50px rgba(100, 255, 170, 0.3);
+        }
+
+        .notification h3 {
+            color: #64ffaa;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            background: rgba(100, 200, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 5px;
+            color: #64c8ff;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="dysonCanvas"></canvas>
+        <div class="star-glow"></div>
+        
+        <div class="ui-panel">
+            <h2>🌟 戴森球控制台</h2>
+            
+            <div class="stat-row">
+                <span class="stat-label">恒星类型</span>
+                <span class="stat-value">G型主序星</span>
+            </div>
+            
+            <div class="stat-row">
+                <span class="stat-label">能量产出</span>
+                <span class="stat-value" id="energyOutput">0 TW</span>
+            </div>
+            
+            <div class="stat-row">
+                <span class="stat-label">完成度</span>
+                <span class="stat-value" id="completion">0%</span>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+            
+            <div class="stat-row" style="margin-top: 15px;">
+                <span class="stat-label">结构单元</span>
+                <span class="stat-value" id="structureCount">0 / 10,000</span>
+            </div>
+            
+            <div class="stat-row">
+                <span class="stat-label">当前层级</span>
+                <span class="stat-value" id="currentTier">戴森云 <span class="tier-badge">T1</span></span>
+            </div>
+
+            <div class="controls">
+                <button id="buildBtn" onclick="game.buildStructure()">
+                    建造结构单元 (+1%)
+                </button>
+                <button id="autoBuildBtn" onclick="game.toggleAutoBuild()">
+                    启动自动建造
+                </button>
+                <button id="upgradeBtn" onclick="game.upgradeTier()" disabled>
+                    升级至下一层级
+                </button>
+                <button id="resetBtn" onclick="game.reset()" style="background: linear-gradient(135deg, #722e1e 0%, #982a2a 100%);">
+                    重置模拟
+                </button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <strong>操作说明：</strong><br>
+            • 点击"建造"添加结构单元<br>
+            • 鼠标拖拽旋转视角<br>
+            • 滚轮缩放视图<br>
+            • 完成100%可升级层级
+        </div>
+
+        <div class="notification" id="notification">
+            <h3>🎉 升级完成！</h3>
+            <p id="notificationText">已升级至戴森环</p>
+        </div>
+    </div>
+
+    <script>
+        class DysonSphereGame {
+            constructor() {
+                this.canvas = document.getElementById('dysonCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                // 游戏状态
+                this.structures = [];
+                this.completion = 0;
+                this.energyOutput = 0;
+                this.tier = 1;
+                this.tierNames = ['戴森云', '戴森环', '戴森泡', '戴森壳', '完整戴森球'];
+                this.maxStructures = [100, 500, 2000, 5000, 10000];
+                this.autoBuild = false;
+                this.autoBuildInterval = null;
+                
+                // 视觉参数
+                this.rotation = 0;
+                this.targetRotation = 0;
+                this.zoom = 1;
+                this.targetZoom = 1;
+                this.starRadius = 40;
+                this.camera = { x: 0, y: 0 };
+                this.isDragging = false;
+                this.lastMouse = { x: 0, y: 0 };
+                
+                // 初始化
+                this.resize();
+                this.setupEvents();
+                this.generateStars();
+                this.loop();
+                
+                // 初始结构
+                this.addInitialStructures();
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.centerX = this.canvas.width / 2;
+                this.centerY = this.canvas.height / 2;
+            }
+
+            setupEvents() {
+                window.addEventListener('resize', () => this.resize());
+                
+                // 鼠标交互
+                this.canvas.addEventListener('mousedown', (e) => {
+                    this.isDragging = true;
+                    this.lastMouse = { x: e.clientX, y: e.clientY };
+                });
+                
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        const dx = e.clientX - this.lastMouse.x;
+                        const dy = e.clientY - this.lastMouse.y;
+                        this.targetRotation += dx * 0.01;
+                        this.camera.y += dy * 0.5;
+                        this.lastMouse = { x: e.clientX, y: e.clientY };
+                    }
+                });
+                
+                this.canvas.addEventListener('mouseup', () => this.isDragging = false);
+                this.canvas.addEventListener('mouseleave', () => this.isDragging = false);
+                
+                this.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    this.targetZoom *= e.deltaY > 0 ? 0.9 : 1.1;
+                    this.targetZoom = Math.max(0.3, Math.min(3, this.targetZoom));
+                });
+            }
+
+            generateStars() {
+                this.backgroundStars = [];
+                for (let i = 0; i < 200; i++) {
+                    this.backgroundStars.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        size: Math.random() * 2,
+                        alpha: Math.random(),
+                        twinkleSpeed: Math.random() * 0.02 + 0.01
+                    });
+                }
+            }
+
+            addInitialStructures() {
+                // 初始添加一些随机分布的结构
+                for (let i = 0; i < 5; i++) {
+                    this.addStructure();
+                }
+            }
+
+            addStructure() {
+                if (this.structures.length >= this.maxStructures[this.tier - 1]) return;
+                
+                const max = this.maxStructures[this.tier - 1];
+                const angle = (this.structures.length / max) * Math.PI * 2;
+                const radius = this.getTierRadius();
+                const variance = Math.random() * 20 - 10;
+                
+                this.structures.push({
+                    angle: angle + Math.random() * 0.5,
+                    radius: radius + variance,
+                    type: Math.floor(Math.random() * 3),
+                    size: 8 + Math.random() * 4,
+                    energy: 0,
+                    maxEnergy: 100,
+                    color: this.getTierColor()
+                });
+                
+                this.updateStats();
+            }
+
+            getTierRadius() {
+                const baseRadius = 120;
+                return baseRadius + (this.tier - 1) * 40;
+            }
+
+            getTierColor() {
+                const colors = [
+                    'rgba(100, 200, 255, 0.8)',  // 云 - 蓝
+                    'rgba(100, 255, 150, 0.8)',  // 环 - 绿
+                    'rgba(255, 200, 100, 0.8)',  // 泡 - 金
+                    'rgba(255, 100, 150, 0.8)',  // 壳 - 红
+                    'rgba(200, 100, 255, 0.8)'   // 球 - 紫
+                ];
+                return colors[this.tier - 1];
+            }
+
+            buildStructure() {
+                if (this.structures.length < this.maxStructures[this.tier - 1]) {
+                    this.addStructure();
+                    
+                    // 添加建造特效
+                    this.createBuildEffect();
+                }
+            }
+
+            createBuildEffect() {
+                // 视觉反馈
+                const btn = document.getElementById('buildBtn');
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => btn.style.transform = '', 100);
+            }
+
+            toggleAutoBuild() {
+                this.autoBuild = !this.autoBuild;
+                const btn = document.getElementById('autoBuildBtn');
+                
+                if (this.autoBuild) {
+                    btn.textContent = '停止自动建造';
+                    btn.style.background = 'linear-gradient(135deg, #722e1e 0%, #982a2a 100%)';
+                    this.autoBuildInterval = setInterval(() => {
+                        if (this.structures.length < this.maxStructures[this.tier - 1]) {
+                            this.addStructure();
+                        } else {
+                            this.toggleAutoBuild();
+                        }
+                    }, 200);
+                } else {
+                    btn.textContent = '启动自动建造';
+                    btn.style.background = '';
+                    clearInterval(this.autoBuildInterval);
+                }
+            }
+
+            upgradeTier() {
+                if (this.completion >= 100 && this.tier < 5) {
+                    this.tier++;
+                    this.structures = []; // 重置结构，但保留进度概念
+                    this.addInitialStructures();
+                    
+                    // 显示通知
+                    this.showNotification(`已升级至${this.tierNames[this.tier - 1]}`);
+                    
+                    // 升级特效
+                    this.createUpgradeEffect();
+                }
+                this.updateStats();
+            }
+
+            showNotification(text) {
+                const notif = document.getElementById('notification');
+                document.getElementById('notificationText').textContent = text;
+                notif.style.display = 'block';
+                setTimeout(() => {
+                    notif.style.display = 'none';
+                }, 3000);
+            }
+
+            createUpgradeEffect() {
+                // 全屏闪光效果
+                const flash = document.createElement('div');
+                flash.style.position = 'fixed';
+                flash.style.top = '0';
+                flash.style.left = '0';
+                flash.style.width = '100%';
+                flash.style.height = '100%';
+                flash.style.background = 'white';
+                flash.style.opacity = '0.8';
+                flash.style.pointerEvents = 'none';
+                flash.style.transition = 'opacity 1s ease';
+                flash.style.zIndex = '99';
+                document.body.appendChild(flash);
+                
+                setTimeout(() => flash.style.opacity = '0', 50);
+                setTimeout(() => flash.remove(), 1000);
+            }
+
+            reset() {
+                this.structures = [];
+                this.completion = 0;
+                this.energyOutput = 0;
+                this.tier = 1;
+                this.rotation = 0;
+                this.targetRotation = 0;
+                this.zoom = 1;
+                this.targetZoom = 1;
+                this.camera = { x: 0, y: 0 };
+                
+                if (this.autoBuild) this.toggleAutoBuild();
+                
+                this.addInitialStructures();
+                this.updateStats();
+            }
+
+            updateStats() {
+                const max = this.maxStructures[this.tier - 1];
+                this.completion = Math.min(100, (this.structures.length / max) * 100);
+                this.energyOutput = (this.structures.length * Math.pow(this.tier, 2) * 0.1).toFixed(1);
+                
+                document.getElementById('energyOutput').textContent = this.energyOutput + ' TW';
+                document.getElementById('completion').textContent = Math.floor(this.completion) + '%';
+                document.getElementById('progressBar').style.width = this.completion + '%';
+                document.getElementById('structureCount').textContent = `${this.structures.length} / ${max.toLocaleString()}`;
+                document.getElementById('currentTier').innerHTML = `${this.tierNames[this.tier - 1]} <span class="tier-badge">T${this.tier}</span>`;
+                
+                const upgradeBtn = document.getElementById('upgradeBtn');
+                upgradeBtn.disabled = this.completion < 100 || this.tier >= 5;
+                if (this.tier >= 5) {
+                    upgradeBtn.textContent = '已达最高层级';
+                } else {
+                    upgradeBtn.textContent = `升级至${this.tierNames[this.tier]}`;
+                }
+            }
+
+            draw() {
+                // 清空画布
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制背景星空
+                this.drawBackgroundStars();
+                
+                this.ctx.save();
+                
+                // 应用相机变换
+                this.ctx.translate(this.centerX + this.camera.x, this.centerY + this.camera.y);
+                this.ctx.scale(this.zoom, this.zoom);
+                
+                // 绘制恒星
+                this.drawStar();
+                
+                // 绘制戴森球结构
+                this.drawDysonStructures();
+                
+                this.ctx.restore();
+            }
+
+            drawBackgroundStars() {
+                this.backgroundStars.forEach(star => {
+                    star.alpha += star.twinkleSpeed;
+                    if (star.alpha > 1 || star.alpha < 0.3) star.twinkleSpeed *= -1;
+                    
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(star.alpha)})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+
+            drawStar() {
+                // 恒星发光效果
+                const gradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, this.starRadius * 3);
+                gradient.addColorStop(0, 'rgba(255, 255, 200, 1)');
+                gradient.addColorStop(0.2, 'rgba(255, 200, 100, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 150, 50, 0.4)');
+                gradient.addColorStop(1, 'transparent');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, this.starRadius * 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // 恒星本体
+                this.ctx.fillStyle = '#ffffcc';
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, this.starRadius, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // 恒星表面纹理
+                this.ctx.strokeStyle = 'rgba(255, 200, 100, 0.5)';
+                this.ctx.lineWidth = 2;
+                for (let i = 0; i < 3; i++) {
+                    this.ctx.beginPath();
+                    this.ctx.arc(0, 0, this.starRadius - i * 8, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+            }
+
+            drawDysonStructures() {
+                // 根据层级绘制不同形状
+                if (this.tier === 1) {
+                    this.drawDysonCloud();
+                } else if (this.tier === 2) {
+                    this.drawDysonRing();
+                } else if (this.tier === 3) {
+                    this.drawDysonBubble();
+                } else if (this.tier === 4) {
+                    this.drawDysonShell();
+                } else {
+                    this.drawCompleteSphere();
+                }
+            }
+
+            drawDysonCloud() {
+                // 戴森云 - 分散的点状结构
+                this.structures.forEach((struct, i) => {
+                    const x = Math.cos(struct.angle + this.rotation) * struct.radius;
+                    const y = Math.sin(struct.angle + this.rotation) * struct.radius * 0.6; // 压扁形成轨道盘效果
+                    
+                    // 太阳能收集器
+                    this.ctx.fillStyle = struct.color;
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowColor = struct.color;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, struct.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // 连接线
+                    if (i > 0) {
+                        const prev = this.structures[i - 1];
+                        const px = Math.cos(prev.angle + this.rotation) * prev.radius;
+                        const py = Math.sin(prev.angle + this.rotation) * prev.radius * 0.6;
+                        
+                        this.ctx.strokeStyle = 'rgba(100, 200, 255, 0.2)';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(px, py);
+                        this.ctx.lineTo(x, y);
+                        this.ctx.stroke();
+                    }
+                });
+                this.ctx.shadowBlur = 0;
+            }
+
+            drawDysonRing() {
+                // 戴森环 - 环形结构
+                const radius = this.getTierRadius();
+                
+                // 绘制轨道环
+                this.ctx.strokeStyle = 'rgba(100, 255, 150, 0.3)';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.ellipse(0, 0, radius, radius * 0.6, 0, 0, Math.PI * 2);
+                this.ctx.stroke();
+                
+                // 绘制结构单元
+                this.structures.forEach(struct => {
+                    const x = Math.cos(struct.angle + this.rotation) * radius;
+                    const y = Math.sin(struct.angle + this.rotation) * radius * 0.6;
+                    
+                    this.ctx.fillStyle = struct.color;
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.shadowColor = struct.color;
+                    
+                    // 六边形结构
+                    this.drawHexagon(x, y, struct.size);
+                });
+                this.ctx.shadowBlur = 0;
+            }
+
+            drawDysonBubble() {
+                // 戴森泡 - 多个独立轨道
+                this.structures.forEach((struct, i) => {
+                    const orbitRadius = struct.radius;
+                    const x = Math.cos(struct.angle + this.rotation * (1 + i * 0.1)) * orbitRadius;
+                    const y = Math.sin(struct.angle + this.rotation * (1 + i * 0.1)) * orbitRadius * Math.cos(this.rotation * 0.5);
+                    const z = Math.sin(struct.angle + this.rotation * (1 + i * 0.1)) * orbitRadius * Math.sin(this.rotation * 0.5);
+                    
+                    const scale = (z + 200) / 400; // 简单的透视效果
+                    const alpha = Math.max(0.3, (z + 200) / 400);
+                    
+                    this.ctx.fillStyle = struct.color.replace('0.8', alpha.toFixed(2));
+                    this.ctx.shadowBlur = 10 * scale;
+                    this.ctx.shadowColor = struct.color;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, struct.size * scale, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                this.ctx.shadowBlur = 0;
+            }
+
+            drawDysonShell() {
+                // 戴森壳 - 不完整的球壳
+                const radius = this.getTierRadius();
+                
+                // 绘制半透明球壳
+                const gradient = this.ctx.createRadialGradient(0, 0, radius - 20, 0, 0, radius + 20);
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(0.5, 'rgba(255, 100, 150, 0.1)');
+                gradient.addColorStop(1, 'transparent');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, radius + 20, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // 绘制结构框架
+                this.structures.forEach((struct, i) => {
+                    const angle1 = struct.angle + this.rotation;
+                    const angle2 = struct.angle * 2 + this.rotation;
+                    
+                    const x = Math.cos(angle1) * Math.cos(angle2) * radius;
+                    const y = Math.sin(angle1) * radius;
+                    const z = Math.cos(angle1) * Math.sin(angle2) * radius;
+                    
+                    if (z > 0) { // 只绘制前面部分
+                        const scale = (z + radius) / (radius * 2);
+                        
+                        this.ctx.fillStyle = struct.color;
+                        this.ctx.shadowBlur = 5;
+                        this.ctx.shadowColor = struct.color;
+                        
+                        this.ctx.fillRect(
+                            x - struct.size * scale / 2, 
+                            y - struct.size * scale / 2, 
+                            struct.size * scale, 
+                            struct.size * scale
+                        );
+                    }
+                });
+                this.ctx.shadowBlur = 0;
+            }
+
+            drawCompleteSphere() {
+                // 完整戴森球
+                const radius = this.getTierRadius();
+                
+                // 发光外壳
+                const gradient = this.ctx.createRadialGradient(0, 0, radius - 10, 0, 0, radius + 30);
+                gradient.addColorStop(0, 'rgba(200, 100, 255, 0.4)');
+                gradient.addColorStop(0.7, 'rgba(150, 50, 200, 0.6)');
+                gradient.addColorStop(1, 'rgba(100, 0, 150, 0.8)');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, radius + 30, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // 网格结构
+                this.ctx.strokeStyle = 'rgba(200, 100, 255, 0.6)';
+                this.ctx.lineWidth = 1;
+                
+                for (let i = 0; i < 12; i++) {
+                    const angle = (i / 12) * Math.PI * 2 + this.rotation;
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, 0, radius, radius * Math.sin(angle), angle, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+                
+                // 能量传输光束
+                this.structures.forEach((struct, i) => {
+                    if (i % 10 === 0) {
+                        const angle = struct.angle + this.rotation;
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        
+                        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, 0);
+                        this.ctx.lineTo(x, y);
+                        this.ctx.stroke();
+                    }
+                });
+            }
+
+            drawHexagon(x, y, size) {
+                this.ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const hx = x + Math.cos(angle) * size;
+                    const hy = y + Math.sin(angle) * size;
+                    if (i === 0) this.ctx.moveTo(hx, hy);
+                    else this.ctx.lineTo(hx, hy);
+                }
+                this.ctx.closePath();
+                this.ctx.fill();
+            }
+
+            update() {
+                // 平滑插值
+                this.rotation += (this.targetRotation - this.rotation) * 0.1;
+                this.zoom += (this.targetZoom - this.zoom) * 0.1;
+                
+                // 自动旋转（如果不在拖拽）
+                if (!this.isDragging) {
+                    this.targetRotation += 0.002;
+                }
+                
+                // 限制相机位置
+                this.camera.y *= 0.95;
+            }
+
+            loop() {
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.loop());
+            }
+        }
+
+        // 启动游戏
+        let game;
+        window.onload = () => {
+            game = new DysonSphereGame();
+        };
+    </script>
+</body>
+</html>
