@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>芯途 - 芯片开发模拟器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        
+        body {
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .game-header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .game-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: #ecf0f1;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+        }
+        
+        .game-panel {
+            padding: 20px;
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        
+        .chip-params {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .param-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .param-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .game-log {
+            height: 200px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 20px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>芯途 - 芯片开发模拟器</h1>
+            <p>打造属于你的旗舰芯片</p>
+        </div>
+        
+        <div class="game-stats">
+            <div class="stat-item">
+                <div>研发资金</div>
+                <div class="stat-value" id="money">1000万</div>
+            </div>
+            <div class="stat-item">
+                <div>剩余时间</div>
+                <div class="stat-value" id="time">30天</div>
+            </div>
+            <div class="stat-item">
+                <div>芯片评分</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+            <div class="stat-item">
+                <div>研发等级</div>
+                <div class="stat-value" id="level">1</div>
+            </div>
+        </div>
+        
+        <div class="game-panel">
+            <div class="panel-title">芯片参数设计</div>
+            <div class="chip-params">
+                <div class="param-item">
+                    <div>制程工艺 (nm): <span id="process-node">14</span></div>
+                    <input type="range" min="2" max="28" step="2" value="14" class="param-slider" id="process-slider">
+                    <small>数值越小越先进，研发成本越高</small>
+                </div>
+                
+                <div class="param-item">
+                    <div>性能指数: <span id="performance-val">50</span></div>
+                    <input type="range" min="10" max="100" step="5" value="50" class="param-slider" id="performance-slider">
+                    <small>越高性能越好，功耗和成本越高</small>
+                </div>
+                
+                <div class="param-item">
+                    <div>功耗控制: <span id="power-val">50</span></div>
+                    <input type="range" min="10" max="100" step="5" value="50" class="param-slider" id="power-slider">
+                    <small>越高功耗越低，性能会受影响</small>
+                </div>
+                
+                <div class="param-item">
+                    <div>良品率 (%): <span id="yield-val">70</span></div>
+                    <input type="range" min="30" max="95" step="5" value="70" class="param-slider" id="yield-slider">
+                    <small>越高成本越低，研发难度越大</small>
+                </div>
+            </div>
+            
+            <button class="btn" id="develop-btn">开始流片</button>
+            <button class="btn btn-danger" id="reset-btn">重置游戏</button>
+            
+            <div class="panel-title" style="margin-top: 20px;">研发日志</div>
+            <div class="game-log" id="game-log">
+                欢迎来到芯片开发模拟器！<br>
+                调整参数，开始你的芯片研发之旅吧！
+            </div>
+        </div>
+    </div>
+    
+    <!-- 结果弹窗 -->
+    <div class="modal" id="result-modal">
+        <div class="modal-content">
+            <h2>研发结果</h2>
+            <div class="result-stats">
+                <div>最终评分: <span id="final-score">0</span></div>
+                <div>研发成本: <span id="cost">0</span></div>
+                <div>市场收益: <span id="income">0</span></div>
+                <div>净收益: <span id="profit">0</span></div>
+            </div>
+            <p id="result-desc"></p>
+            <button class="btn" id="continue-btn">继续研发</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏核心数据
+        const gameData = {
+            money: 1000, // 单位：万
+            time: 30,    // 单位：天
+            level: 1,
+            score: 0,
+            params: {
+                process: 14,
+                performance: 50,
+                power: 50,
+                yield: 70
+            }
+        };
+
+        // DOM元素
+        const elements = {
+            money: document.getElementById('money'),
+            time: document.getElementById('time'),
+            score: document.getElementById('score'),
+            level: document.getElementById('level'),
+            processNode: document.getElementById('process-node'),
+            performanceVal: document.getElementById('performance-val'),
+            powerVal: document.getElementById('power-val'),
+            yieldVal: document.getElementById('yield-val'),
+            processSlider: document.getElementById('process-slider'),
+            performanceSlider: document.getElementById('performance-slider'),
+            powerSlider: document.getElementById('power-slider'),
+            yieldSlider: document.getElementById('yield-slider'),
+            developBtn: document.getElementById('develop-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            gameLog: document.getElementById('game-log'),
+            resultModal: document.getElementById('result-modal'),
+            finalScore: document.getElementById('final-score'),
+            cost: document.getElementById('cost'),
+            income: document.getElementById('income'),
+            profit: document.getElementById('profit'),
+            resultDesc: document.getElementById('result-desc'),
+            continueBtn: document.getElementById('continue-btn')
+        };
+
+        // 更新参数显示
+        function updateParamDisplay() {
+            elements.processNode.textContent = gameData.params.process;
+            elements.performanceVal.textContent = gameData.params.performance;
+            elements.powerVal.textContent = gameData.params.power;
+            elements.yieldVal.textContent = gameData.params.yield;
+        }
+
+        // 更新游戏状态显示
+        function updateGameStats() {
+            elements.money.textContent = `${gameData.money}万`;
+            elements.time.textContent = `${gameData.time}天`;
+            elements.score.textContent = gameData.score;
+            elements.level.textContent = gameData.level;
+        }
+
+        // 添加日志
+        function addLog(message) {
+            const now = new Date();
+            const timeStr = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+            elements.gameLog.innerHTML += `<br>[${timeStr}] ${message}`;
+            elements.gameLog.scrollTop = elements.gameLog.scrollHeight;
+        }
+
+        // 计算研发成本
+        function calculateCost() {
+            // 制程越先进成本越高，性能越高成本越高，良品率越高成本越低
+            let baseCost = (28 - gameData.params.process) * 20 + gameData.params.performance * 5 - gameData.params.yield * 2;
+            // 难度系数
+            baseCost *= gameData.level * 0.8;
+            return Math.round(baseCost);
+        }
+
+        // 计算芯片评分
+        function calculateScore() {
+            // 综合评分公式
+            const processScore = (28 - gameData.params.process) * 4; // 制程分
+            const perfScore = gameData.params.performance * 2.5;    // 性能分
+            const powerScore = gameData.params.power * 2;           // 功耗分
+            const yieldScore = gameData.params.yield * 1.5;         // 良品率分
+            
+            let totalScore = Math.round(processScore + perfScore + powerScore + yieldScore);
+            
+            // 平衡性调整：参数之间的制衡
+            if (gameData.params.performance - gameData.params.power > 40) {
+                totalScore -= 30; // 性能过高功耗太差扣分
+                addLog("警告：性能与功耗严重失衡，评分降低！");
+            }
+            
+            if (gameData.params.process < 8 && gameData.params.yield < 50) {
+                totalScore -= 50; // 先进制程但良品率太低扣分
+                addLog("警告：先进制程良品率过低，量产风险极高！");
+            }
+            
+            return totalScore;
+        }
+
+        // 计算市场收益
+        function calculateIncome(score) {
+            let income = score * 15 * (1 + gameData.level * 0.2);
+            
+            // 随机市场波动
+            const randomFactor = 0.8 + Math.random() * 0.4; // 0.8-1.2之间
+            income = Math.round(income * randomFactor);
+            
+            return income;
+        }
+
+        // 开始研发流程
+        function startDevelop() {
+            // 检查资金
+            const cost = calculateCost();
+            if (cost > gameData.money) {
+                addLog(`研发成本${cost}万超过当前资金${gameData.money}万，无法开始流片！`);
+                return;
+            }
+
+            // 扣除资金
+            gameData.money -= cost;
+            addLog(`开始流片，研发成本：${cost}万，剩余资金：${gameData.money}万`);
+
+            // 消耗时间
+            const timeCost = Math.round(10 + (28 - gameData.params.process) * 1.5);
+            gameData.time -= timeCost;
+            addLog(`流片耗时${timeCost}天，剩余研发时间：${gameData.time}天`);
+
+            // 检查时间是否用完
+            if (gameData.time <= 0) {
+                addLog("研发时间耗尽！");
+                showResult(cost, 0, 0, "研发超时，项目失败！");
+                return;
+            }
+
+            // 流片过程（模拟加载）
+            elements.developBtn.disabled = true;
+            addLog("正在流片中...请等待");
+            
+            setTimeout(() => {
+                // 计算最终评分
+                gameData.score = calculateScore();
+                addLog(`芯片测试完成，综合评分：${gameData.score}`);
+
+                // 计算收益
+                const income = calculateIncome(gameData.score);
+                gameData.money += income;
+                const profit = income - cost;
+
+                // 更新状态
+                updateGameStats();
+
+                // 显示结果
+                let resultDesc = "";
+                if (gameData.score >= 300) {
+                    resultDesc = "恭喜！你的芯片达到旗舰级别，市场反响热烈！";
+                    gameData.level += 1;
+                } else if (gameData.score >= 200) {
+                    resultDesc = "芯片表现良好，达到市场主流水平。";
+                } else if (gameData.score >= 100) {
+                    resultDesc = "芯片勉强合格，只能满足入门级市场需求。";
+                } else {
+                    resultDesc = "芯片研发失败，性能不达标，无法量产。";
+                }
+
+                showResult(cost, income, profit, resultDesc);
+                elements.developBtn.disabled = false;
+
+            }, 2000);
+        }
+
+        // 显示结果弹窗
+        function showResult(cost, income, profit, desc) {
+            elements.finalScore.textContent = gameData.score;
+            elements.cost.textContent = `${cost}万`;
+            elements.income.textContent = `${income}万`;
+            elements.profit.textContent = `${profit}万`;
+            elements.resultDesc.textContent = desc;
+            
+            elements.resultModal.style.display = "flex";
+        }
+
+        // 重置游戏
+        function resetGame() {
+            gameData.money = 1000;
+            gameData.time = 30;
+            gameData.level = 1;
+            gameData.score = 0;
+            gameData.params = {
+                process: 14,
+                performance: 50,
+                power: 50,
+                yield: 70
+            };
+
+            // 重置UI
+            elements.processSlider.value = 14;
+            elements.performanceSlider.value = 50;
+            elements.powerSlider.value = 50;
+            elements.yieldSlider.value = 70;
+            
+            updateParamDisplay();
+            updateGameStats();
+            elements.gameLog.innerHTML = "游戏已重置！<br>欢迎重新开始芯片研发之旅！";
+        }
+
+        // 事件监听
+        function initEvents() {
+            // 参数滑块监听
+            elements.processSlider.addEventListener('input', function() {
+                gameData.params.process = parseInt(this.value);
+                updateParamDisplay();
+            });
+
+            elements.performanceSlider.addEventListener('input', function() {
+                gameData.params.performance = parseInt(this.value);
+                updateParamDisplay();
+            });
+
+            elements.powerSlider.addEventListener('input', function() {
+                gameData.params.power = parseInt(this.value);
+                updateParamDisplay();
+            });
+
+            elements.yieldSlider.addEventListener('input', function() {
+                gameData.params.yield = parseInt(this.value);
+                updateParamDisplay();
+            });
+
+            // 按钮监听
+            elements.developBtn.addEventListener('click', startDevelop);
+            elements.resetBtn.addEventListener('click', resetGame);
+            elements.continueBtn.addEventListener('click', function() {
+                elements.resultModal.style.display = "none";
+                addLog("准备开始下一轮研发...");
+                // 补充一点时间
+                gameData.time += 10;
+                updateGameStats();
+            });
+        }
+
+        // 初始化游戏
+        function initGame() {
+            updateParamDisplay();
+            updateGameStats();
+            initEvents();
+            addLog("游戏初始化完成！");
+        }
+
+        // 启动游戏
+        window.onload = initGame;
+    </script>
+</body>
+</html>
