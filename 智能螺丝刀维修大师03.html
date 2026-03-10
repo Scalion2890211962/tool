@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能螺丝刀维修大师</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@400;700&display=swap');
+        
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            overflow: hidden;
+            background: #0a0a0f;
+        }
+        
+        .tech-font {
+            font-family: 'Orbitron', monospace;
+        }
+        
+        .neon-glow {
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 
+                        0 0 20px rgba(0, 255, 255, 0.3),
+                        0 0 30px rgba(0, 255, 255, 0.2);
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8),
+                         0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        .screw {
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .screw.rotating {
+            animation: rotateScrew 0.2s linear infinite; /* 加快旋转速度 */
+        }
+        
+        @keyframes rotateScrew {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .circuit-line {
+            stroke-dasharray: 10;
+            animation: dash 20s linear infinite;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+        
+        .float {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pulse-ring {
+            animation: pulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        
+        @keyframes pulseRing {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        
+        .glitch {
+            position: relative;
+        }
+        
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 #ff00ff;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+        
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 #00ffff;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+        
+        @keyframes glitch-anim {
+            0% { clip: rect(30px, 9999px, 10px, 0); }
+            20% { clip: rect(80px, 9999px, 90px, 0); }
+            40% { clip: rect(10px, 9999px, 50px, 0); }
+            60% { clip: rect(60px, 9999px, 20px, 0); }
+            80% { clip: rect(40px, 9999px, 70px, 0); }
+            100% { clip: rect(90px, 9999px, 30px, 0); }
+        }
+        
+        @keyframes glitch-anim2 {
+            0% { clip: rect(60px, 9999px, 40px, 0); }
+            20% { clip: rect(10px, 9999px, 80px, 0); }
+            40% { clip: rect(50px, 9999px, 20px, 0); }
+            60% { clip: rect(30px, 9999px, 60px, 0); }
+            80% { clip: rect(70px, 9999px, 10px, 0); }
+            100% { clip: rect(20px, 9999px, 90px, 0); }
+        }
+        
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 50;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #00ffff 0%, #0080ff 100%);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+        
+        .tool-btn {
+            transition: all 0.2s;
+        }
+        
+        .tool-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+        
+        .tool-btn.active {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+        
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 255, 0.5);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        
+        .hologram {
+            background: linear-gradient(135deg, rgba(0,255,255,0.1) 0%, rgba(0,255,255,0.05) 100%);
+            border: 1px solid rgba(0,255,255,0.3);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- 游戏容器 -->
+    <div id="gameContainer" class="relative w-full h-screen overflow-hidden">
+        
+        <!-- 背景Canvas -->
+        <canvas id="bgCanvas" class="absolute inset-0 z-0"></canvas>
+        
+        <!-- 扫描线效果 -->
+        <div class="scan-line z-10"></div>
+        
+        <!-- 主菜单 -->
+        <div id="mainMenu" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div class="text-center space-y-8 p-8">
+                <h1 class="text-6xl md:text-8xl font-black tech-font neon-text glitch mb-4" data-text="SCREWDRIVER">
+                    SCREWDRIVER
+                </h1>
+                <h2 class="text-2xl md:text-4xl text-cyan-400 tracking-widest mb-8">智能维修大师</h2>
+                
+                <div class="space-y-4">
+                    <button onclick="startGame()" class="group relative px-12 py-4 bg-cyan-500/20 border-2 border-cyan-400 text-cyan-300 text-xl font-bold rounded hover:bg-cyan-500/40 transition-all duration-300 neon-glow">
+                        <span class="relative z-10">开始维修</span>
+                        <div class="absolute inset-0 bg-cyan-400/20 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+                    </button>
+                    
+                    <button onclick="showTutorial()" class="block w-full px-12 py-4 bg-transparent border-2 border-gray-600 text-gray-400 text-lg rounded hover:border-cyan-400 hover:text-cyan-400 transition-all">
+                        操作指南
+                    </button>
+                </div>
+                
+                <div class="mt-8 text-gray-500 text-sm">
+                    <p>Version 2.0.26 | 科技维修模拟器</p>
+                </div>
+            </div>
+            
+            <!-- 装饰性螺丝刀 -->
+            <div class="absolute bottom-20 right-20 opacity-20 float">
+                <svg width="200" height="200" viewBox="0 0 200 200">
+                    <defs>
+                        <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#silver;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#e0e0e0;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#909090;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="90" y="20" width="20" height="120" fill="url(#metal)" rx="2"/>
+                    <rect x="85" y="140" width="30" height="40" fill="#ff6b00" rx="5"/>
+                    <rect x="80" y="140" width="40" height="10" fill="#333" rx="2"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- 游戏界面 -->
+        <div id="gameUI" class="hidden absolute inset-0 z-20">
+            <!-- HUD -->
+            <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent">
+                <div class="flex gap-4">
+                    <div class="hologram rounded-lg p-3">
+                        <div class="text-xs text-gray-400 mb-1">维修进度</div>
+                        <div class="w-48 h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
+                            <div id="progressBar" class="progress-bar h-full w-0 transition-all duration-500"></div>
+                        </div>
+                        <div id="progressText" class="text-cyan-400 text-sm mt-1 font-mono">0%</div>
+                    </div>
+                    
+                    <div class="hologram rounded-lg p-3">
+                        <div class="text-xs text-gray-400 mb-1">当前工具</div>
+                        <div id="currentTool" class="text-cyan-300 font-bold tech-font">未选择</div>
+                    </div>
+                </div>
+                
+                <div class="hologram rounded-lg p-3 text-right">
+                    <div class="text-xs text-gray-400 mb-1">时间</div>
+                    <div id="timer" class="text-2xl font-bold tech-font text-red-400">05:00</div>
+                </div>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4 p-4 hologram rounded-2xl">
+                <button onclick="selectTool('screwdriver')" id="tool-screwdriver" class="tool-btn w-16 h-16 rounded-xl border-2 border-gray-600 bg-gray-800/50 flex items-center justify-center relative group">
+                    <svg class="w-10 h-10 text-gray-400 group-hover:text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L14.5 8.5L21 9L16 14L17.5 20.5L12 17.5L6.5 20.5L8 14L3 9L9.5 8.5L12 2Z"/>
+                    </svg>
+                    <span class="absolute -top-8 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-cyan-500">智能螺丝刀</span>
+                </button>
+                
+                <button onclick="selectTool('multimeter')" id="tool-multimeter" class="tool-btn w-16 h-16 rounded-xl border-2 border-gray-600 bg-gray-800/50 flex items-center justify-center relative group">
+                    <svg class="w-10 h-10 text-gray-400 group-hover:text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+                        <rect x="4" y="8" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <path d="M8 12L10 16L14 10L16 14" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    <span class="absolute -top-8 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-cyan-500">万用表</span>
+                </button>
+                
+                <button onclick="selectTool('solder')" id="tool-solder" class="tool-btn w-16 h-16 rounded-xl border-2 border-gray-600 bg-gray-800/50 flex items-center justify-center relative group">
+                    <svg class="w-10 h-10 text-gray-400 group-hover:text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C12 2 8 6 8 10C8 12 9 14 12 14C15 14 16 12 16 10C16 6 12 2 12 2Z" fill="currentColor"/>
+                        <rect x="11" y="14" width="2" height="8" fill="currentColor"/>
+                    </svg>
+                    <span class="absolute -top-8 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-cyan-500">电烙铁</span>
+                </button>
+                
+                <button onclick="selectTool('cleaner')" id="tool-cleaner" class="tool-btn w-16 h-16 rounded-xl border-2 border-gray-600 bg-gray-800/50 flex items-center justify-center relative group">
+                    <svg class="w-10 h-10 text-gray-400 group-hover:text-cyan-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM12 17C9.2 17 7 14.8 7 12C7 9.2 9.2 7 12 7C14.8 7 17 9.2 17 12C17 14.8 14.8 17 12 17Z" opacity="0.3"/>
+                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                    </svg>
+                    <span class="absolute -top-8 bg-black text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-cyan-500">清洁剂</span>
+                </button>
+            </div>
+
+            <!-- 提示信息 -->
+            <div id="messageArea" class="absolute top-24 left-1/2 transform -translate-x-1/2 text-center pointer-events-none">
+                <div id="gameMessage" class="text-cyan-300 text-lg font-bold opacity-0 transition-opacity duration-300 bg-black/60 px-6 py-2 rounded-full border border-cyan-500/30"></div>
+            </div>
+        </div>
+
+        <!-- 维修工作台 -->
+        <div id="workbench" class="hidden absolute inset-0 z-10 flex items-center justify-center">
+            <div class="relative w-full max-w-4xl h-full max-h-[80vh] flex items-center justify-center">
+                <!-- 智能螺丝刀主体 -->
+                <div id="screwdriverBody" class="relative w-96 h-96 transition-all duration-500">
+                    <!-- 外壳 -->
+                    <div id="casing" class="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 rounded-3xl shadow-2xl border-2 border-gray-600 overflow-hidden">
+                        <!-- 纹理 -->
+                        <div class="absolute inset-0 opacity-20" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.1) 35px, rgba(255,255,255,.1) 70px);"></div>
+                        
+                        <!-- LED显示屏 -->
+                        <div class="absolute top-8 left-1/2 transform -translate-x-1/2 w-48 h-24 bg-black rounded-lg border-4 border-gray-600 overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-b from-cyan-900/20 to-transparent"></div>
+                            <div id="ledScreen" class="absolute inset-0 flex items-center justify-center text-cyan-400 font-mono text-2xl tech-font">
+                                ERR 01
+                            </div>
+                            <div class="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" id="errorLight"></div>
+                        </div>
+
+                        <!-- 螺丝位置 - 支持长按拆卸 -->
+                        <div class="absolute top-4 left-4 w-8 h-8" data-screw="1"
+                            onmousedown="startHoldScrew(1)"
+                            onmouseup="stopHoldScrew()"
+                            onmouseleave="stopHoldScrew()"
+                            ontouchstart="startHoldScrew(1)"
+                            ontouchend="stopHoldScrew()">
+                            <div class="screw w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 rounded-full shadow-lg flex items-center justify-center border-2 border-gray-500 hover:border-cyan-400 transition-colors">
+                                <div class="w-6 h-1 bg-gray-800 rounded-full transform rotate-45"></div>
+                            </div>
+                            <div class="pulse-ring absolute inset-0 rounded-full border-2 border-cyan-400 opacity-0" id="ring-1"></div>
+                        </div>
+
+                        <div class="absolute top-4 right-4 w-8 h-8" data-screw="2"
+                            onmousedown="startHoldScrew(2)"
+                            onmouseup="stopHoldScrew()"
+                            onmouseleave="stopHoldScrew()"
+                            ontouchstart="startHoldScrew(2)"
+                            ontouchend="stopHoldScrew()">
+                            <div class="screw w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 rounded-full shadow-lg flex items-center justify-center border-2 border-gray-500 hover:border-cyan-400 transition-colors">
+                                <div class="w-6 h-1 bg-gray-800 rounded-full transform rotate-45"></div>
+                            </div>
+                            <div class="pulse-ring absolute inset-0 rounded-full border-2 border-cyan-400 opacity-0" id="ring-2"></div>
+                        </div>
+
+                        <div class="absolute bottom-4 left-4 w-8 h-8" data-screw="3"
+                            onmousedown="startHoldScrew(3)"
+                            onmouseup="stopHoldScrew()"
+                            onmouseleave="stopHoldScrew()"
+                            ontouchstart="startHoldScrew(3)"
+                            ontouchend="stopHoldScrew()">
+                            <div class="screw w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 rounded-full shadow-lg flex items-center justify-center border-2 border-gray-500 hover:border-cyan-400 transition-colors">
+                                <div class="w-6 h-1 bg-gray-800 rounded-full transform rotate-45"></div>
+                            </div>
+                            <div class="pulse-ring absolute inset-0 rounded-full border-2 border-cyan-400 opacity-0" id="ring-3"></div>
+                        </div>
+
+                        <div class="absolute bottom-4 right-4 w-8 h-8" data-screw="4"
+                            onmousedown="startHoldScrew(4)"
+                            onmouseup="stopHoldScrew()"
+                            onmouseleave="stopHoldScrew()"
+                            ontouchstart="startHoldScrew(4)"
+                            ontouchend="stopHoldScrew()">
+                            <div class="screw w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 rounded-full shadow-lg flex items-center justify-center border-2 border-gray-500 hover:border-cyan-400 transition-colors">
+                                <div class="w-6 h-1 bg-gray-800 rounded-full transform rotate-45"></div>
+                            </div>
+                            <div class="pulse-ring absolute inset-0 rounded-full border-2 border-cyan-400 opacity-0" id="ring-4"></div>
+                        </div>
+
+                        <!-- 内部组件（初始隐藏） -->
+                        <div id="internalComponents" class="absolute inset-8 bg-gray-900 rounded-xl opacity-0 pointer-events-none transition-opacity duration-500 flex items-center justify-center">
+                            <!-- 电路板 -->
+                            <div class="w-full h-full relative bg-green-900/30 rounded-lg border border-green-500/30 p-4">
+                                <svg class="w-full h-full" viewBox="0 0 300 300">
+                                    <!-- 电路路径 -->
+                                    <path d="M50 50 L100 50 L100 100 L150 100" stroke="#00ff00" stroke-width="2" fill="none" class="circuit-line" opacity="0.6"/>
+                                    <path d="M250 50 L200 50 L200 100 L150 100" stroke="#00ff00" stroke-width="2" fill="none" class="circuit-line" opacity="0.6"/>
+                                    <path d="M50 250 L100 250 L100 200 L150 200" stroke="#00ff00" stroke-width="2" fill="none" class="circuit-line" opacity="0.6"/>
+                                    <path d="M250 250 L200 250 L200 200 L150 200" stroke="#00ff00" stroke-width="2" fill="none" class="circuit-line" opacity="0.6"/>
+                                    
+                                    <!-- 芯片 -->
+                                    <rect x="120" y="120" width="60" height="60" fill="#333" stroke="#666" stroke-width="2"/>
+                                    <text x="150" y="155" text-anchor="middle" fill="#00ffff" font-size="10" class="tech-font">CPU</text>
+                                    
+                                    <!-- 损坏的焊点 -->
+                                    <circle id="solderPoint1" cx="80" cy="80" r="8" fill="#ff0000" class="cursor-pointer hover:r-10 transition-all" onclick="handleComponentClick('solder1')"/>
+                                    <circle id="solderPoint2" cx="220" cy="220" r="8" fill="#ff0000" class="cursor-pointer hover:r-10 transition-all" onclick="handleComponentClick('solder2')"/>
+                                    
+                                    <!-- 灰尘区域 -->
+                                    <circle id="dust1" cx="80" cy="220" r="15" fill="gray" opacity="0.7" class="cursor-pointer" onclick="handleComponentClick('dust1')"/>
+                                    <circle id="dust2" cx="220" cy="80" r="12" fill="gray" opacity="0.7" class="cursor-pointer" onclick="handleComponentClick('dust2')"/>
+                                    
+                                    <!-- 电池 -->
+                                    <rect x="130" y="240" width="40" height="20" fill="#444" stroke="#666"/>
+                                    <rect id="battery" x="132" y="242" width="36" height="16" fill="#ff0000" onclick="handleComponentClick('battery')"/>
+                                </svg>
+                                
+                                <!-- 故障提示 -->
+                                <div class="absolute top-2 left-2 text-xs text-red-400 font-mono">
+                                    <div id="faultList">
+                                        <div>• 焊点脱落 (2)</div>
+                                        <div>• 积尘严重 (2)</div>
+                                        <div>• 电池故障 (1)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 批头 -->
+                    <div class="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-16 h-20 bg-gradient-to-b from-gray-400 to-gray-600 rounded-b-lg shadow-lg">
+                        <div class="w-8 h-4 bg-gray-800 mx-auto mt-2 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 胜利画面 -->
+        <div id="victoryScreen" class="hidden absolute inset-0 z-30 flex items-center justify-center bg-black/90 backdrop-blur-md">
+            <div class="text-center space-y-6 p-8 hologram rounded-2xl border-2 border-cyan-500 max-w-lg w-full mx-4">
+                <div class="text-6xl mb-4">🔧</div>
+                <h2 class="text-4xl font-bold tech-font text-cyan-400 mb-2">维修完成!</h2>
+                <p class="text-gray-300 mb-4">智能螺丝刀已成功修复</p>
+                
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-black/50 p-3 rounded border border-gray-700">
+                        <div class="text-gray-500">耗时</div>
+                        <div id="finalTime" class="text-xl text-cyan-300 tech-font">--:--</div>
+                    </div>
+                    <div class="bg-black/50 p-3 rounded border border-gray-700">
+                        <div class="text-gray-500">评分</div>
+                        <div id="finalScore" class="text-xl text-yellow-400 tech-font">S</div>
+                    </div>
+                </div>
+                
+                <button onclick="location.reload()" class="mt-6 w-full py-3 bg-cyan-500/20 border-2 border-cyan-400 text-cyan-300 rounded-lg hover:bg-cyan-500/40 transition-all font-bold">
+                    再次挑战
+                </button>
+            </div>
+        </div>
+
+        <!-- 失败画面 -->
+        <div id="failScreen" class="hidden absolute inset-0 z-30 flex items-center justify-center bg-black/90 backdrop-blur-md">
+            <div class="text-center space-y-6 p-8 hologram rounded-2xl border-2 border-red-500 max-w-lg w-full mx-4">
+                <div class="text-6xl mb-4">⚠️</div>
+                <h2 class="text-4xl font-bold tech-font text-red-400 mb-2">维修失败</h2>
+                <p id="failReason" class="text-gray-300 mb-4">时间耗尽</p>
+                
+                <button onclick="location.reload()" class="mt-6 w-full py-3 bg-red-500/20 border-2 border-red-400 text-red-300 rounded-lg hover:bg-red-500/40 transition-all font-bold">
+                    重新尝试
+                </button>
+            </div>
+        </div>
+
+        <!-- 教程弹窗 -->
+        <div id="tutorialModal" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div class="bg-gray-900 border-2 border-cyan-500 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6">
+                <h3 class="text-2xl font-bold text-cyan-400 mb-4 tech-font">维修手册</h3>
+                
+                <div class="space-y-4 text-gray-300 text-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center flex-shrink-0 border border-cyan-500">1</div>
+                        <div>
+                            <h4 class="text-cyan-300 font-bold mb-1">拆卸外壳</h4>
+                            <p>使用<span class="text-yellow-400">智能螺丝刀</span>长按外壳上的螺丝进行拆卸，按住0.5秒即可拧出。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center flex-shrink-0 border border-cyan-500">2</div>
+                        <div>
+                            <h4 class="text-cyan-300 font-bold mb-1">检测故障</h4>
+                            <p>使用<span class="text-yellow-400">万用表</span>检测电路板上的故障点。红色标记表示异常。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center flex-shrink-0 border border-cyan-500">3</div>
+                        <div>
+                            <h4 class="text-cyan-300 font-bold mb-1">焊接修复</h4>
+                            <p>使用<span class="text-yellow-400">电烙铁</span>修复脱落的焊点。点击红色焊点进行焊接。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center flex-shrink-0 border border-cyan-500">4</div>
+                        <div>
+                            <h4 class="text-cyan-300 font-bold mb-1">清洁保养</h4>
+                            <p>使用<span class="text-yellow-400">清洁剂</span>清除电路板上的灰尘。点击灰色灰尘区域进行清理。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center flex-shrink-0 border border-cyan-500">5</div>
+                        <div>
+                            <h4 class="text-cyan-300 font-bold mb-1">更换电池</h4>
+                            <p>检测电池状态，如有需要请更换新电池。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="hideTutorial()" class="mt-6 w-full py-3 bg-cyan-500 text-black font-bold rounded-lg hover:bg-cyan-400 transition-colors">
+                    明白了
+                </button>
+            </div>
+        </div>
+
+        <!-- 工具提示 -->
+        <div id="tooltip" class="tooltip"></div>
+    </div>
+
+    <script>
+        // 游戏状态
+        const gameState = {
+            currentTool: null,
+            screwsRemoved: 0,
+            totalScrews: 4,
+            casingOpen: false,
+            faults: {
+                solder1: false,
+                solder2: false,
+                dust1: false,
+                dust2: false,
+                battery: false
+            },
+            timeRemaining: 300, // 5分钟
+            isPlaying: false,
+            score: 0
+        };
+
+        // 音频上下文
+        let synth, noiseSynth, membrane;
+        let audioInitialized = false;
+
+        async function initAudio() {
+            if (audioInitialized) return;
+            await Tone.start();
+            
+            synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            synth.volume.value = -10;
+            
+            noiseSynth = new Tone.NoiseSynth({
+                noise: { type: 'pink' },
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0 }
+            }).toDestination();
+            noiseSynth.volume.value = -15;
+            
+            membrane = new Tone.MembraneSynth().toDestination();
+            membrane.volume.value = -10;
+            
+            audioInitialized = true;
+        }
+
+        function playSound(type) {
+            if (!audioInitialized) return;
+            
+            switch(type) {
+                case 'click':
+                    synth.triggerAttackRelease(["C6"], "32n");
+                    break;
+                case 'screw':
+                    noiseSynth.triggerAttackRelease("16n");
+                    break;
+                case 'success':
+                    synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "16n");
+                    break;
+                case 'error':
+                    membrane.triggerAttackRelease("C2", "8n");
+                    break;
+                case 'tool':
+                    synth.triggerAttackRelease(["A4"], "32n");
+                    break;
+                case 'win':
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("C4", "8n", now);
+                    synth.triggerAttackRelease("E4", "8n", now + 0.1);
+                    synth.triggerAttackRelease("G4", "8n", now + 0.2);
+                    synth.triggerAttackRelease("C5", "4n", now + 0.3);
+                    break;
+            }
+        }
+
+        // 背景动画
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.2;
+                this.color = Math.random() > 0.5 ? '#00ffff' : '#0080ff';
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 初始化粒子
+        for (let i = 0; i < 50; i++) {
+            particles.push(new Particle());
+        }
+
+        function animateBg() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            // 绘制网格
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        // 游戏逻辑
+        function startGame() {
+            initAudio();
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('gameUI').classList.remove('hidden');
+            document.getElementById('workbench').classList.remove('hidden');
+            gameState.isPlaying = true;
+            startTimer();
+            showMessage("请选择智能螺丝刀开始拆卸");
+        }
+
+        function showTutorial() {
+            document.getElementById('tutorialModal').classList.remove('hidden');
+        }
+
+        function hideTutorial() {
+            document.getElementById('tutorialModal').classList.add('hidden');
+        }
+
+        function selectTool(tool) {
+            playSound('tool');
+            gameState.currentTool = tool;
+            
+            // 更新UI
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tool-${tool}`).classList.add('active');
+            
+            const toolNames = {
+                'screwdriver': '智能螺丝刀',
+                'multimeter': '万用表',
+                'solder': '电烙铁',
+                'cleaner': '清洁剂'
+            };
+            
+            document.getElementById('currentTool').textContent = toolNames[tool];
+            
+            // 提示
+            if (tool === 'screwdriver' && gameState.screwsRemoved < 4) {
+                showMessage("长按螺丝即可快速拆卸！");
+                highlightScrews();
+            } else if (tool === 'multimeter') {
+                showMessage("万用表已准备，点击可疑区域检测");
+            } else if (tool === 'solder') {
+                showMessage("电烙铁已加热，点击红色焊点进行修复");
+            } else if (tool === 'cleaner') {
+                showMessage("清洁剂已准备，点击灰尘区域进行清理");
+            }
+        }
+
+        function highlightScrews() {
+            for (let i = 1; i <= 4; i++) {
+                const ring = document.getElementById(`ring-${i}`);
+                if (ring) ring.style.opacity = '1';
+            }
+            setTimeout(() => {
+                for (let i = 1; i <= 4; i++) {
+                    const ring = document.getElementById(`ring-${i}`);
+                    if (ring) ring.style.opacity = '0';
+                }
+            }, 2000);
+        }
+
+        // 长按拧螺丝核心逻辑
+        let holdTimer = null;
+
+        function startHoldScrew(id) {
+            // 检查是否选中了螺丝刀
+            if (gameState.currentTool !== 'screwdriver') {
+                showMessage("需要使用智能螺丝刀！", "error");
+                playSound('error');
+                document.getElementById('screwdriverBody').classList.add('shake');
+                setTimeout(() => document.getElementById('screwdriverBody').classList.remove('shake'), 500);
+                return;
+            }
+            
+            const screw = document.querySelector(`[data-screw="${id}"] .screw`);
+            if (screw.dataset.removed === "true") return;
+            
+            // 开始旋转动画和音效
+            playSound('screw');
+            screw.classList.add('rotating');
+
+            // 长按500ms后拆卸螺丝
+            holdTimer = setTimeout(() => {
+                screw.classList.remove('rotating');
+                screw.style.transform = 'scale(0)';
+                screw.dataset.removed = "true";
+                gameState.screwsRemoved++;
+                
+                createParticles(screw.getBoundingClientRect());
+                
+                if (gameState.screwsRemoved === 4) {
+                    setTimeout(openCasing, 300);
+                }
+                
+                updateProgress();
+            }, 500);
+        }
+
+        function stopHoldScrew() {
+            // 松手/离开时停止旋转
+            clearTimeout(holdTimer);
+            document.querySelectorAll('.screw').forEach(s => s.classList.remove('rotating'));
+        }
+
+        function openCasing() {
+            playSound('success');
+            gameState.casingOpen = true;
+            document.getElementById('internalComponents').style.opacity = '1';
+            document.getElementById('internalComponents').style.pointerEvents = 'auto';
+            document.getElementById('ledScreen').textContent = "DIAG...";
+            document.getElementById('errorLight').classList.remove('bg-red-500');
+            document.getElementById('errorLight').classList.add('bg-yellow-500');
+            
+            showMessage("外壳已打开，发现内部故障！请使用万用表检测");
+            
+            // 自动切换到万用表
+            setTimeout(() => selectTool('multimeter'), 1500);
+        }
+
+        function handleComponentClick(type) {
+            if (!gameState.casingOpen) return;
+            
+            if (type.startsWith('solder') && gameState.currentTool !== 'solder') {
+                showMessage("需要使用电烙铁修复焊点", "error");
+                playSound('error');
+                return;
+            }
+            
+            if (type.startsWith('dust') && gameState.currentTool !== 'cleaner') {
+                showMessage("需要使用清洁剂清理", "error");
+                playSound('error');
+                return;
+            }
+            
+            if (type === 'battery' && gameState.currentTool !== 'multimeter') {
+                showMessage("需要使用万用表检测电池", "error");
+                playSound('error');
+                return;
+            }
+            
+            const element = document.getElementById(type === 'solder1' ? 'solderPoint1' : 
+                                                     type === 'solder2' ? 'solderPoint2' :
+                                                     type === 'dust1' ? 'dust1' :
+                                                     type === 'dust2' ? 'dust2' : 'battery');
+            
+            if (gameState.faults[type]) return;
+            
+            playSound('click');
+            
+            if (type.startsWith('solder')) {
+                // 焊接动画
+                element.style.fill = '#00ff00';
+                element.setAttribute('r', '12');
+                setTimeout(() => element.setAttribute('r', '8'), 200);
+                createSparkles(element.getBoundingClientRect());
+            } else if (type.startsWith('dust')) {
+                // 清洁动画
+                element.style.opacity = '0';
+                createParticles(element.getBoundingClientRect(), 'gray');
+            } else if (type === 'battery') {
+                // 检测电池
+                element.style.fill = '#00ff00';
+                showMessage("电池状态：正常");
+            }
+            
+            gameState.faults[type] = true;
+            checkWinCondition();
+            updateProgress();
+        }
+
+        function checkWinCondition() {
+            const allFixed = Object.values(gameState.faults).every(v => v === true);
+            if (allFixed && gameState.casingOpen) {
+                setTimeout(() => {
+                    playSound('win');
+                    document.getElementById('ledScreen').textContent = "READY";
+                    document.getElementById('ledScreen').classList.add('text-green-400');
+                    document.getElementById('errorLight').classList.remove('bg-yellow-500');
+                    document.getElementById('errorLight').classList.add('bg-green-500');
+                    showMessage("所有故障已修复！");
+                    
+                    setTimeout(showVictory, 2000);
+                }, 500);
+            }
+        }
+
+        function updateProgress() {
+            let progress = (gameState.screwsRemoved / 4) * 40;
+            const faultsFixed = Object.values(gameState.faults).filter(v => v).length;
+            progress += (faultsFixed / 5) * 60;
+            
+            gameState.score = Math.floor(progress);
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `${Math.floor(progress)}%`;
+        }
+
+        function showMessage(text, type = 'info') {
+            const msg = document.getElementById('gameMessage');
+            msg.textContent = text;
+            msg.style.opacity = '1';
+            msg.className = type === 'error' ? 
+                'text-red-400 text-lg font-bold opacity-100 transition-opacity duration-300 bg-black/60 px-6 py-2 rounded-full border border-red-500/30' :
+                'text-cyan-300 text-lg font-bold opacity-100 transition-opacity duration-300 bg-black/60 px-6 py-2 rounded-full border border-cyan-500/30';
+            
+            setTimeout(() => {
+                msg.style.opacity = '0';
+            }, 3000);
+        }
+
+        function createParticles(rect, color = 'cyan') {
+            const count = 8;
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = centerX + 'px';
+                particle.style.top = centerY + 'px';
+                particle.style.width = (Math.random() * 6 + 2) + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.background = color === 'cyan' ? '#00ffff' : '#888';
+                particle.style.boxShadow = `0 0 10px ${particle.style.background}`;
+                
+                const angle = (Math.PI * 2 * i) / count;
+                const velocity = Math.random() * 100 + 50;
+                const tx = Math.cos(angle) * velocity;
+                const ty = Math.sin(angle) * velocity;
+                
+                particle.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                document.body.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.style.transform = `translate(${tx}px, ${ty}px) scale(0)`;
+                    particle.style.opacity = '0';
+                }, 10);
+                
+                setTimeout(() => particle.remove(), 600);
+            }
+        }
+
+        function createSparkles(rect) {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('div');
+                    sparkle.style.position = 'absolute';
+                    sparkle.style.left = (rect.left + Math.random() * rect.width) + 'px';
+                    sparkle.style.top = (rect.top + Math.random() * rect.height) + 'px';
+                    sparkle.style.width = '4px';
+                    sparkle.style.height = '4px';
+                    sparkle.style.background = '#ffff00';
+                    sparkle.style.borderRadius = '50%';
+                    sparkle.style.boxShadow = '0 0 10px #ffff00';
+                    sparkle.style.pointerEvents = 'none';
+                    sparkle.style.animation = 'pulseRing 0.5s ease-out forwards';
+                    document.body.appendChild(sparkle);
+                    setTimeout(() => sparkle.remove(), 500);
+                }, i * 100);
+            }
+        }
+
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                if (!gameState.isPlaying) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                
+                gameState.timeRemaining--;
+                const minutes = Math.floor(gameState.timeRemaining / 60);
+                const seconds = gameState.timeRemaining % 60;
+                document.getElementById('timer').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (gameState.timeRemaining <= 60) {
+                    document.getElementById('timer').classList.add('animate-pulse');
+                }
+                
+                if (gameState.timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    gameOver("时间耗尽！维修失败");
+                }
+            }, 1000);
+        }
+
+        function showVictory() {
+            gameState.isPlaying = false;
+            const minutes = Math.floor((300 - gameState.timeRemaining) / 60);
+            const seconds = (300 - gameState.timeRemaining) % 60;
+            document.getElementById('finalTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // 计算评分
+            let grade = 'S';
+            if (gameState.timeRemaining < 100) grade = 'A';
+            if (gameState.timeRemaining < 60) grade = 'B';
+            if (gameState.timeRemaining < 30) grade = 'C';
+            document.getElementById('finalScore').textContent = grade;
+            
+            document.getElementById('victoryScreen').classList.remove('hidden');
+        }
+
+        function gameOver(reason) {
+            gameState.isPlaying = false;
+            document.getElementById('failReason').textContent = reason;
+            document.getElementById('failScreen').classList.remove('hidden');
+        }
+
+        // 防止移动端双击缩放
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
